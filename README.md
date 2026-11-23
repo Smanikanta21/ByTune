@@ -356,6 +356,18 @@ Providers & storage (YouTube Music · LRCLIB · local files · optional Supabase
 
 A deeper dive — including how anonymous YouTube Music streaming works (BotGuard PO tokens, InnerTube client rotation, the local stream proxy) and how persistence, Automix analysis and local-music scanning are implemented — lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Contributors
+
+ByTune is made by [@rishiteja21](https://github.com/rishiteja21), with code from:
+
+- [@Akshith17323](https://github.com/Akshith17323): resizable Library and Now Playing panels (1.2.0, #19)
+- [@ChaitanyaSai-Meka](https://github.com/ChaitanyaSai-Meka): far lower GPU use while ByTune isn't in front (1.2.0, #15)
+- [@Rakshith-Reddy-G](https://github.com/Rakshith-Reddy-G): AirPods controls and the mini player on every desktop on macOS, and the sidebar shortcut switches (1.2.0, #21)
+- [@bevinkatti](https://github.com/bevinkatti): the compact mini player (1.1.1, #10)
+- [@voidfant](https://github.com/voidfant): the 10-band equalizer and loading the next song early (#3, #2)
+
+Want to help? [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, tests and pull-request guidelines.
+
 ## License
 
 Copyright © 2026 Rishiteja Thabeti. ByTune is licensed under the **GNU GPL v3** (see [LICENSE](LICENSE)). Third-party code it includes, and its licenses, are listed in [NOTICE](NOTICE).
