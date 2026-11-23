@@ -52,6 +52,7 @@ import { analyseTrack, peekAnalysis, type TrackAnalysis } from "./analysis";
 import { upgradeArtwork } from "./artwork";
 import { shortTitle } from "./format";
 import { createMediaKeyTap } from "./media-key-tap";
+import { isMac } from "./platform";
 import { useSleepTimer } from "./sleepTimer";
 import { inRoom, stopHere, useRoom } from "../stores/room";
 import {
@@ -1638,6 +1639,20 @@ function updateMediaSession(track: Track | null): void {
   }
 }
 
+/**
+ * Playing, paused, or nothing loaded. macOS hands the AirPods and Control Center's play/pause to the
+ * app whose session says it is playing: with the song's details alone, ByTune's session could stay
+ * passive and a press went to another player, or nowhere.
+ */
+function syncPlaybackState(hasTrack: boolean, playing: boolean): void {
+  if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = hasTrack ? (playing ? "playing" : "paused") : "none";
+  } catch {
+    /* an older Chromium without playbackState */
+  }
+}
+
 function syncPositionState(): void {
   if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
   const a = el();
@@ -1688,8 +1703,19 @@ function setupMediaSession(): void {
       multi: () => usePlayer.getState().next(true),
     },
   );
-  set("play", () => tap.press("play"));
-  set("pause", () => tap.press("pause"));
+  // macOS turns an AirPods or headset double and triple press into next and previous itself, so its
+  // play and pause act at once; elsewhere they wait out the double-press window (media-key-tap).
+  const press = (kind: "play" | "pause"): void => {
+    if (!isMac) return tap.press(kind);
+    tap.cancelPending();
+    usePlayer.getState().setPlaying(kind === "play");
+  };
+  set("play", () => press("play"));
+  set("pause", () => press("pause"));
+  set("stop", () => {
+    tap.cancelPending();
+    usePlayer.getState().setPlaying(false);
+  });
   // A pending single press belongs to the pre-skip context; applying it after
   // the user already moved (or seeked) elsewhere would stop what they chose.
   set("previoustrack", () => {
@@ -1720,6 +1746,13 @@ function setupMediaSession(): void {
     actions.get(a.action)?.({ action: a.action, seekTime: a.seekTime } as MediaSessionActionDetails)
   );
   window.setInterval(syncPositionState, 1000);
+  // Every play, pause and change of song tells the session which state ByTune is in.
+  const now = usePlayer.getState();
+  syncPlaybackState(!!now.queue[now.index], now.playing);
+  usePlayer.subscribe((s, p) => {
+    const cur = s.queue[s.index] ?? null;
+    if (s.playing !== p.playing || cur?.id !== (p.queue[p.index] ?? null)?.id) syncPlaybackState(!!cur, s.playing);
+  });
 }
 
 /**

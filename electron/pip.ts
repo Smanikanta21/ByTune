@@ -305,8 +305,11 @@ export function openPip(): void {
     },
   });
   // "floating" = standard always-on-top: above normal windows, below system
-  // dialogs and other topmost windows (Spotify's level).
+  // dialogs and other topmost windows.
   pipWindow.setAlwaysOnTop(true, "floating");
+  // macOS: it follows you onto every desktop (Space) and over full-screen apps, instead of staying
+  // on the desktop it opened on. Windows has nothing like Spaces, so it's macOS only.
+  if (process.platform === "darwin") pipWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   restrictNavigation(pipWindow, true);
   loadInto(pipWindow);
 
