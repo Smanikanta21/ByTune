@@ -452,7 +452,8 @@ export function parseResponsiveListItem(renderer: any, fallback: Credits = {}): 
     album: credits.albumName ?? fallback.albumName,
     duration: parseDurationText(duration),
     thumb: bestThumb(thumbnails),
-    explicit: hasExplicitBadge(renderer.subtitleBadges) || undefined,
+    // A song row carries it in its own badges (subtitleBadges kept for rows that put it there).
+    explicit: hasExplicitBadge([renderer.badges, renderer.subtitleBadges]) || undefined,
     // The row-type word is the clean signal ("All" tab); otherwise widescreen
     // art gives a music-video upload away where catalogue art is square.
     isVideo: rowType === "video" || isNotSquare(thumbnails),

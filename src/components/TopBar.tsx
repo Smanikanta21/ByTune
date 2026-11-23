@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Compass,
   Copy,
-  History,
   Home,
   Minus,
   RefreshCw,
@@ -35,12 +34,12 @@ import { shownName, useSession } from "../lib/session";
 import { isMac } from "../lib/platform";
 import { avatarFor } from "../lib/avatar";
 import { useSettings } from "../stores/settings";
-import { useUI } from "../stores/ui";
+import { useUI, type MenuItem } from "../stores/ui";
 import { usePlayer } from "../stores/player";
 import { useRecents } from "../stores/recents";
-import { useRecentItems } from "../stores/recentItems";
+import { recentLine, useRecentItems, type RecentItem } from "../stores/recentItems";
 import type { SearchSuggestion } from "../types";
-import { Artwork } from "./primitives";
+import { Artwork, ExplicitBadge } from "./primitives";
 import { lightOf } from "./RowLight";
 import { FitText } from "./FitText";
 import { useMenuLight } from "./ContextMenu";
@@ -48,6 +47,12 @@ import { StreakChip } from "./Streak";
 import { useUpdates } from "../lib/updates";
 import brandLogo from "../assets/brand/bytune-logo.svg";
 import brandText from "../assets/brand/bytune-Text.svg";
+
+/** A recent search as the rich row it was picked from: it plays or opens the same way, and moves back to the top. */
+const asSuggestion = (r: RecentItem): SearchSuggestion =>
+  r.kind === "song"
+    ? { text: r.title, thumb: r.thumb, id: r.id, kind: "song", track: r.track }
+    : { text: r.title, thumb: r.thumb, id: r.id, kind: r.kind, browse: { browseId: r.id, title: r.title, subtitle: r.subtitle, thumb: r.thumb, type: r.kind } };
 
 /** Brand mark + wordmark composed inline so the spacing follows the bar height.
     Both SVGs are pure white — they sit directly on the dark `chrome-glass` bar.
@@ -193,9 +198,7 @@ export function TopBar() {
   /** Settings is what you're looking at (not hidden under the lyrics): the profile button closes it. */
   const settingsShown = useUI((s) => s.view.name === "settings" && !s.lyricsCenter);
   const toggleSettings = useUI((s) => s.toggleSettings);
-  const recents = useRecents((s) => s.searches);
-  const removeSearch = useRecents((s) => s.removeSearch);
-  const clearSearches = useRecents((s) => s.clearSearches);
+  const recentItems = useRecentItems((s) => s.items);
   const track = usePlayer((s) => s.queue[s.index] ?? null);
 
   // Typing only feeds the dropdown — the page behind it stays put. The
@@ -296,7 +299,7 @@ export function TopBar() {
   };
 
   /** Mobile model: an empty focused field drops the recent-searches panel. */
-  const historyOpen = fieldFocused && suggestOpen === false && recents.length > 0 && query.trim().length === 0;
+  const historyOpen = fieldFocused && suggestOpen === false && recentItems.length > 0 && query.trim().length === 0;
 
   /** Run a search: commit the text, close the dropdown, blur the field. */
   const submitSearch = (text: string): void => {
@@ -342,14 +345,14 @@ export function TopBar() {
   };
 
   /** The search page's menu for the same kind of row; it takes over from the dropdown. */
-  const openSuggestionMenu = (e: React.MouseEvent, s: SearchSuggestion): void => {
+  const openSuggestionMenu = (e: React.MouseEvent, s: SearchSuggestion, extra: MenuItem[] = []): void => {
     const items = s.track ? trackMenuItems(s.track) : s.browse ? browseMenuItems(s.browse) : [];
     if (!items.length) return;
     e.preventDefault();
     closeDropdown();
     setFieldFocused(false);
     inputRef.current?.blur();
-    useUI.getState().openContextMenu(e.clientX, e.clientY, items);
+    useUI.getState().openContextMenu(e.clientX, e.clientY, [...items, ...extra]);
   };
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -586,76 +589,93 @@ export function TopBar() {
               </div>
             </div>
           )}
-          {/* Recent searches: an empty focused field
-              drops the history list, with a clear-all in the header and a
-              per-row ✕. Choosing a row runs that search. */}
+          {/* Recent searches: an empty focused field drops what you played or
+              opened from search, newest first: the header and five rows in
+              view (half of the sixth shows there's more), the rest of the 20
+              a scroll away. A row plays or opens like the rich rows above,
+              which also moves it back to the top; ✕ takes it off, and the
+              button at the end clears them all. */}
           {historyOpen && (
             <div
-              className="menu absolute left-0 right-0 top-full mt-2 z-50 max-h-[420px] overflow-y-auto"
+              className="menu absolute left-0 right-0 top-full mt-2 z-50 max-h-[354px] overflow-y-auto"
               style={{ "--menu-origin": "top center" } as React.CSSProperties}
               role="listbox"
               aria-label="Recent searches"
             >
-              <div className="flex items-center justify-between pl-3 pr-1.5 h-9">
-                <span className="text-[12px] font-semibold text-ink-hi/45">Recent searches</span>
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={clearSearches}
-                  className="px-2.5 h-7 rounded-full text-[12px] font-medium text-ink-hi/55 hover:text-ink-hi hover:bg-ink-hi/[0.08] transition-colors"
-                >
-                  Clear all
-                </button>
+              <div className="flex items-center pl-2.5 h-10">
+                <span className="text-[15px] font-bold text-ink-hi">Recent searches</span>
               </div>
               <div className="menu-list" {...recentLight.track}>
               {recentLight.light}
-              {recents.map((q) => (
-                <div
-                  key={q}
-                  data-menu-row=""
-                  /* Whole row is the click target: the inner button only spans
-                     its content height, so the rest of the highlighted row
-                     showed the arrow cursor and ate clicks. */
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => submitSearch(q)}
-                  onContextMenu={(e) => {
-                    // The menu takes over from the dropdown, as a typeahead row's does.
-                    e.preventDefault();
-                    closeDropdown();
-                    setFieldFocused(false);
-                    inputRef.current?.blur();
-                    useUI.getState().openContextMenu(e.clientX, e.clientY, [
-                      { label: `Search "${q}"`, icon: Search, action: () => submitSearch(q) },
-                      { label: "Remove from recent searches", icon: X, separatorBefore: true, action: () => removeSearch(q) },
-                    ]);
-                  }}
-                  className="fit-host group relative w-full flex cursor-pointer items-center gap-3 pl-2.5 pr-1.5 h-11 rounded-[10px]"
-                >
-                  <button
+              {recentItems.map((r) => {
+                const s = asSuggestion(r);
+                return (
+                  <div
+                    key={`${r.kind}:${r.id}`}
+                    data-menu-row=""
+                    data-light={r.thumb ? lightOf(r.thumb) : undefined}
+                    /* Whole row is the click target: the inner button only spans
+                       its content height, so the rest of the highlighted row
+                       showed the arrow cursor and ate clicks. */
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      submitSearch(q);
-                    }}
-                    className="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer"
+                    onClick={() => openSuggestion(s)}
+                    onContextMenu={(e) =>
+                      openSuggestionMenu(e, s, [
+                        { label: "Remove from recent searches", icon: X, separatorBefore: true, action: () => useRecentItems.getState().remove(r.kind, r.id) },
+                      ])
+                    }
+                    className="fit-host group relative w-full flex cursor-pointer items-center gap-3 pl-2.5 pr-1.5 h-14 rounded-[10px]"
                   >
-                    <History className="w-4 h-4 text-ink-hi/55 shrink-0" />
-                    <FitText text={q} className="text-[14px] text-ink-hi" />
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSearch(q);
-                    }}
-                    title="Remove"
-                    aria-label={`Remove "${q}" from recent searches`}
-                    className="p-1.5 rounded-full text-ink-hi/35 hover:text-ink-hi hover:bg-ink-hi/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openSuggestion(s);
+                      }}
+                      className="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer"
+                    >
+                      <Artwork
+                        src={r.thumb}
+                        rounded={r.kind === "artist" ? "rounded-full" : "rounded-md"}
+                        className="w-11 h-11 shrink-0"
+                        iconClassName="w-4 h-4"
+                        alt=""
+                      />
+                      <span className="min-w-0 flex-1">
+                        <FitText text={r.title} className="text-[14px] font-semibold text-ink-hi" />
+                        <span className="flex items-center gap-1.5 mt-0.5 text-[12px] text-ink-hi/55">
+                          {r.kind === "song" && r.track.explicit && <ExplicitBadge />}
+                          <FitText text={recentLine(r)} />
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        useRecentItems.getState().remove(r.kind, r.id);
+                      }}
+                      title="Remove"
+                      aria-label={`Remove "${r.title}" from recent searches`}
+                      className="p-1.5 rounded-full text-ink-hi/35 hover:text-ink-hi hover:bg-ink-hi/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
               </div>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  useRecentItems.getState().clear();
+                  // The typed searches go too: nothing shows them, but they still shape recommendations.
+                  useRecents.getState().clearSearches();
+                }}
+                className="inline-flex items-center h-9 px-4 mx-2.5 mt-2.5 mb-1.5 rounded-full border border-ink-hi/25 text-[13.5px] font-semibold text-ink-hi hover:border-ink-hi/50 hover:bg-ink-hi/[0.06] transition-all active:scale-[0.98]"
+              >
+                Clear recent searches
+              </button>
             </div>
           )}
           {/* Spotify's right side of the field: clear (once there's text), a

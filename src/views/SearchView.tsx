@@ -9,7 +9,7 @@
  * YouTube's continuation token, exactly like the phone.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Disc3, LayoutGrid, ListMusic, ListPlus, ListStart, Mic, MoreVertical, Music2, Play, Search as SearchIcon, SearchX, User, X, type LucideIcon } from "lucide-react";
+import { Disc3, LayoutGrid, ListMusic, ListPlus, ListStart, Mic, MoreVertical, Music2, Play, SearchX, User, X, type LucideIcon } from "lucide-react";
 import { Artwork, EqBars, ErrorState, ExplicitBadge, IconBtn, ListSkeleton, Pills } from "../components/primitives";
 import { browseMenuItems, trackMenuItems } from "../lib/trackActions";
 import { playAlbum } from "../lib/album";
@@ -21,7 +21,7 @@ import { HoverLight, PlayingLight, useRowLight } from "../components/RowLight";
 import { isMac } from "../lib/platform";
 import { usePlayer, useTrackPlayback } from "../stores/player";
 import { useRecents } from "../stores/recents";
-import { useRecentItems, type RecentItem } from "../stores/recentItems";
+import { recentLine, useRecentItems, type RecentItem } from "../stores/recentItems";
 import { searchPageOnce } from "../lib/searchOnce";
 import { tintHoverHandlers, useUI, type MenuItem } from "../stores/ui";
 import type { BrowseItem, SearchFilter, SearchPageResult, SearchRow, Track } from "../types";
@@ -367,8 +367,6 @@ function TopResultCard({ song, onPlay }: { song: Track; onPlay: () => void }) {
 /* Page                                                             */
 /* ---------------------------------------------------------------- */
 
-const KIND_LABEL: Record<RecentItem["kind"], string> = { song: "Song", artist: "Artist", album: "Album", playlist: "Playlist" };
-
 /** Songs, artists, albums and playlists you opened from search, one click away. */
 function RecentlyOpened() {
   const items = useRecentItems((s) => s.items);
@@ -397,7 +395,8 @@ function RecentlyOpened() {
         </button>
       </div>
       <div className="tile-grid">
-        {items.map((item) => (
+        {/* The newest 12 as tiles; the search field's Recent searches lists all 20. */}
+        {items.slice(0, 12).map((item) => (
           <div
             key={`${item.kind}:${item.id}`}
             role="button"
@@ -424,11 +423,7 @@ function RecentlyOpened() {
             />
             <div className="min-w-0 flex-1">
               <FitText lines={2} text={item.title} className="text-[13px] font-medium text-ink-hi leading-[1.3]" />
-              <FitText
-                // YouTube subtitles often start with the type word already ("Artist • …").
-                text={`${KIND_LABEL[item.kind]}${item.subtitle ? ` · ${item.subtitle.replace(/^(artist|album|single|ep|playlist|song)\s*•\s*/i, "")}` : ""}`}
-                className="text-xs text-ink-faint mt-0.5"
-              />
+              <FitText text={recentLine(item)} className="text-xs text-ink-faint mt-0.5" />
             </div>
             <button
               onClick={(e) => {
@@ -442,59 +437,6 @@ function RecentlyOpened() {
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function RecentSearches() {
-  const recents = useRecents((s) => s.searches);
-  const removeSearch = useRecents((s) => s.removeSearch);
-  const clearSearches = useRecents((s) => s.clearSearches);
-  const setQuery = useUI((s) => s.setSearchQuery);
-  const pushSearch = useRecents((s) => s.pushSearch);
-
-  if (recents.length === 0) return null;
-
-  return (
-    <section className="animate-slide-up">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="section-title text-[21px]">Recent searches</h2>
-        <button onClick={clearSearches} className="text-xs text-ink-faint hover:text-ink transition-colors">
-          Clear all
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {recents.map((q) => (
-          <span
-            key={q}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              useUI.getState().openContextMenu(e.clientX, e.clientY, [
-                { label: `Search "${q}"`, icon: SearchIcon, action: () => { setQuery(q); pushSearch(q); } },
-                { label: "Remove from recent searches", icon: X, separatorBefore: true, action: () => removeSearch(q) },
-              ]);
-            }}
-            className="group flex items-center gap-1 pl-3.5 pr-1.5 py-1.5 rounded-full glass text-[13px] text-ink"
-          >
-            <button className="hover:text-ink-hi transition-colors" onClick={() => {
-                setQuery(q);
-                pushSearch(q);
-              }}
-              title={`Search "${q}"`}
-            >
-              {q}
-            </button>
-            <button
-              onClick={() => removeSearch(q)}
-              title="Remove"
-              aria-label={`Remove "${q}" from recent searches`}
-              className="p-1 rounded-full text-ink-ghost hover:text-ink-hi hover:bg-ink-hi/10 opacity-60 group-hover:opacity-100 transition-all"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
         ))}
       </div>
     </section>
@@ -631,7 +573,6 @@ export function SearchView() {
     return (
       <div className="space-y-10">
         <RecentlyOpened />
-        <RecentSearches />
         <div className="flex flex-col items-center text-center py-16">
           <SearchX className="w-10 h-10 text-ink-ghost mb-4" />
           <div className="text-[15px] font-semibold text-ink-hi">Search ByTune</div>

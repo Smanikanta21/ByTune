@@ -140,3 +140,18 @@ test("search rows: hour-long lengths parse, and artist/album links come from the
   assert.equal(row.albumId, "MPREbbb");
   assert.equal(row.album, "Album X");
 });
+
+test("search rows: the explicit badge on a song row (its badges, not subtitleBadges) marks it explicit", () => {
+  const flexColumns = [
+    { musicResponsiveListItemFlexColumnRenderer: { text: { runs: [{ text: "WAP" }] } } },
+    { musicResponsiveListItemFlexColumnRenderer: { text: { runs: [artistRun("Artist A", "UCaaa"), { text: " • " }, { text: "3:07" }] } } },
+  ];
+  const marked = parseResponsiveListItem({
+    playlistItemData: { videoId: "abcdefghijk" },
+    flexColumns,
+    badges: [{ musicInlineBadgeRenderer: { icon: { iconType: "MUSIC_EXPLICIT_BADGE" } } }],
+  });
+  assert.equal(marked.explicit, true);
+  const clean = parseResponsiveListItem({ playlistItemData: { videoId: "abcdefghijk" }, flexColumns });
+  assert.equal(clean.explicit, undefined);
+});
