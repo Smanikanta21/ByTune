@@ -49,9 +49,12 @@ export function useMenuLight(): {
       el.classList.remove("is-on");
       return;
     }
-    const top = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    const box = row.getBoundingClientRect();
+    const frame = list.getBoundingClientRect();
+    // A row spans the list; a cell of a grid (the Sort panel) gets the light across just itself.
     const place = (): void => {
-      el.style.transform = `translateY(${top}px)`;
+      el.style.transform = `translate(${box.left - frame.left}px, ${box.top - frame.top}px)`;
+      el.style.width = `${row.offsetWidth}px`;
       el.style.height = `${row.offsetHeight}px`;
     };
     // From off, it appears on its row instead of gliding in from wherever it last was.
@@ -167,7 +170,9 @@ function rows(items: MenuItem[], row: (item: MenuItem, i: number) => ReactNode, 
     if (item.subject) return;
     if (item.separatorBefore && any && !lastWasLine) out.push(<div key={`line-${i}`} role="separator" className="menu-sep" />);
     out.push(
-      item.header ? (
+      item.node ? (
+        <Fragment key={`node-${i}`}>{item.node}</Fragment>
+      ) : item.header ? (
         <div key={`caption-${i}`} role="presentation" className="menu-caption">
           {item.label}
         </div>

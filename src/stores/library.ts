@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { coalescedStorage } from "../lib/persist";
 import { recordDeletionChanges } from "../lib/deletion-sync";
 import type { DeletionChange, DeletionSync } from "../lib/deletion-sync";
+import { activeSort, type PlaylistSort } from "../lib/playlistSort";
 import type { Track } from "../types";
 
 export interface Playlist {
@@ -22,6 +23,21 @@ export interface Playlist {
   /** when the listener last put the songs in their own order — the newest
       order wins a two-device merge (electron/sync-merge.ts inPlaylistOrder) */
   orderedAt?: number;
+  /** how the page shows the songs when not in their own order (lib/playlistSort); absent = custom order */
+  sort?: PlaylistSort;
+  /** songs its import couldn't find on YouTube Music, kept so they can be found by hand; absent = none */
+  missing?: MissingSong[];
+  /** the listener's own cover: an image from this computer (a small JPEG data URL) or one of its
+      songs' covers. The playlist's picture in the sidebar, Library and folders (lib/collection
+      playlistThumb); its own page's wall stays its songs' covers. */
+  cover?: string;
+}
+
+/** A song an import couldn't find, as its source named it. */
+export interface MissingSong {
+  title: string;
+  /** "" when the source gave none */
+  artist: string;
 }
 
 /** An artist the user dropped into their library — a follow, not a playlist. */
@@ -88,7 +104,11 @@ interface LibraryState {
   setLibraryOrder(keys: string[]): void;
   createPlaylist(name: string): Playlist;
   /** A new playlist holding imported songs — never overwrites an existing one. */
-  importPlaylist(name: string, tracks: Track[], folderId?: string): Playlist;
+  importPlaylist(name: string, tracks: Track[], folderId?: string, missing?: MissingSong[]): Playlist;
+  /** one song off the playlist's not-found list (found or skipped), or the whole list without an index */
+  dropMissing(playlistId: string, index?: number): void;
+  /** the playlist's own cover, or null for its songs' covers again; syncs like its name */
+  setPlaylistCover(playlistId: string, cover: string | null): void;
   renamePlaylist(id: string, name: string): void;
   togglePinPlaylist(id: string): void;
   deletePlaylist(id: string): void;
@@ -96,6 +116,8 @@ interface LibraryState {
   removeFromPlaylist(playlistId: string, trackId: string): void;
   /** Move one song inside a playlist (drag). */
   moveInPlaylist(playlistId: string, from: number, to: number): void;
+  /** how the playlist's page orders its songs; syncs with the playlist like its name */
+  setPlaylistSort(playlistId: string, sort: PlaylistSort): void;
   getPlaylist(id: string): Playlist | null;
   createFolder(name: string): LibraryFolder;
   renameFolder(id: string, name: string): void;
@@ -177,7 +199,7 @@ export const useLibrary = create<LibraryState>()(
         return playlist;
       },
 
-      importPlaylist(name, tracks, folderId) {
+      importPlaylist(name, tracks, folderId, missing) {
         // Always a NEW playlist: an import named like one of the listener's
         // own playlists used to replace that playlist's songs. A clash gets a
         // number instead, and every song is stamped so merges keep it.
@@ -190,7 +212,12 @@ export const useLibrary = create<LibraryState>()(
         // orderedAt: songs added in one batch share an add stamp, so the import's
         // own order is what a merge keeps (electron/sync-merge.ts inPlaylistOrder).
         const now = Date.now();
-        const playlist: Playlist = { id: uid(), name: unique, tracks: list, createdAt: now, orderedAt: now, ...(folderId ? { folderId } : {}) };
+        const notFound = (missing ?? []).filter((m) => m.title.trim()).map((m) => ({ title: m.title.trim(), artist: m.artist.trim() }));
+        const playlist: Playlist = {
+          id: uid(), name: unique, tracks: list, createdAt: now, orderedAt: now,
+          ...(folderId ? { folderId } : {}),
+          ...(notFound.length ? { missing: notFound } : {}),
+        };
         withChanges(set, get, { playlists: [playlist, ...get().playlists] }, [
           { kind: "add", group: "playlists", id: playlist.id },
           ...list.map((t): DeletionChange => ({ kind: "add", group: "tracks", id: t.id, parent: playlist.id })),
@@ -240,6 +267,38 @@ export const useLibrary = create<LibraryState>()(
             p.id === playlistId ? { ...p, tracks: p.tracks.filter((t) => t.id !== trackId) } : p
           ),
         }, [{ kind: "delete", group: "tracks", id: trackId, parent: playlistId }]);
+      },
+
+      dropMissing(playlistId, index) {
+        withChanges(set, get, {
+          playlists: get().playlists.map((p) => {
+            if (p.id !== playlistId || !p.missing) return p;
+            const { missing, ...rest } = p;
+            const left = index === undefined ? [] : missing.filter((_, i) => i !== index);
+            return left.length ? { ...rest, missing: left } : rest;
+          }),
+        }, [{ kind: "edit", group: "playlists", id: playlistId }]);
+      },
+
+      setPlaylistCover(playlistId, cover) {
+        withChanges(set, get, {
+          playlists: get().playlists.map((p) => {
+            if (p.id !== playlistId) return p;
+            const { cover: _cover, ...rest } = p;
+            return cover ? { ...rest, cover } : rest;
+          }),
+        }, [{ kind: "edit", group: "playlists", id: playlistId }]);
+      },
+
+      setPlaylistSort(playlistId, sort) {
+        const next = activeSort(sort);
+        withChanges(set, get, {
+          playlists: get().playlists.map((p) => {
+            if (p.id !== playlistId) return p;
+            const { sort: _sort, ...rest } = p;
+            return next ? { ...rest, sort: next } : rest;
+          }),
+        }, [{ kind: "edit", group: "playlists", id: playlistId }]);
       },
 
       moveInPlaylist(playlistId, from, to) {

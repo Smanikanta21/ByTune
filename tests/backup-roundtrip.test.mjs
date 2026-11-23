@@ -23,6 +23,17 @@ test("equalizer settings survive a backup; a malformed one is never imported", (
   }
 });
 
+test("a profile photo survives a backup; anything but a small image is never imported", () => {
+  const profilePhoto = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+  const doc = settingsToBackup(envelope({ profilePhoto }));
+  assert.deepEqual(doc, { profilePhoto });
+  assert.deepEqual(settingsFromBackup(doc, envelope({})), { profilePhoto });
+  assert.deepEqual(settingsFromBackup({ profilePhoto: "" }, envelope({})), { profilePhoto: "" });
+  for (const bad of ["https://example.com/me.jpg", "data:text/html;base64,PHNjcmlwdD4=", "data:image/jpeg;base64,<svg>", 42, `data:image/jpeg;base64,${"A".repeat(400_000)}`]) {
+    assert.deepEqual(settingsFromBackup({ profilePhoto: bad }, envelope({})), {}, String(bad).slice(0, 40));
+  }
+});
+
 test("saved EQ presets survive a backup; malformed ones are never imported", () => {
   const eqPresets = [{ name: "Night", gains: [3, 2, 1, 0, 0, 0, 0, -1, -2, -3] }];
   const doc = settingsToBackup(envelope({ eqPresets, eqAutoHeadroom: false }));

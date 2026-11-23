@@ -91,6 +91,9 @@ interface SettingsState {
   hideVolumeBar: boolean;
   /** Windows: closing the window hides ByTune in the tray, music paused (electron/close-to-tray.ts). This device's own. */
   closeToTray: boolean;
+  /** Your own profile picture: a small square JPEG data URL (lib/imagePick), "" for the coloured letter.
+      Settings switch with the account and sync with it, so the photo does too. */
+  profilePhoto: string;
 
   setDownloadDir(dir: string | null): void;
   setDownloadQuality(q: DownloadQuality): void;
@@ -124,6 +127,7 @@ interface SettingsState {
   setFilterNonMusicAudio(v: boolean): void;
   setDontRepeatSuggestions(v: boolean): void;
   setHideVolumeBar(v: boolean): void;
+  setProfilePhoto(photo: string): void;
   setCloseToTray(v: boolean): void;
 }
 
@@ -168,6 +172,7 @@ export const useSettings = create<SettingsState>()(
       hideVolumeBar: false,
       // On by default: the main process reads it from this store's file when the window closes.
       closeToTray: true,
+      profilePhoto: "",
 
       setDownloadDir: (downloadDir) => set({ downloadDir }),
       setDownloadQuality: (downloadQuality) => set({ downloadQuality }),
@@ -207,6 +212,7 @@ export const useSettings = create<SettingsState>()(
       setFilterNonMusicAudio: (filterNonMusicAudio) => set({ filterNonMusicAudio }),
       setDontRepeatSuggestions: (dontRepeatSuggestions) => set({ dontRepeatSuggestions }),
       setHideVolumeBar: (hideVolumeBar) => set({ hideVolumeBar }),
+      setProfilePhoto: (profilePhoto) => set({ profilePhoto }),
       setCloseToTray: (closeToTray) => set({ closeToTray }),
     }),
     {

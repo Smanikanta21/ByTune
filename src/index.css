@@ -194,7 +194,7 @@ body {
   background: rgb(255 255 255 / 0.085);
   opacity: 0;
   pointer-events: none;
-  transition: transform 190ms var(--menu-ease), height 190ms var(--menu-ease), opacity 150ms ease, background-color 150ms ease;
+  transition: transform 190ms var(--menu-ease), width 190ms var(--menu-ease), height 190ms var(--menu-ease), opacity 150ms ease, background-color 150ms ease;
 }
 .menu-light.is-on {
   opacity: 1;
@@ -311,6 +311,74 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: rgb(var(--ink-hi) / 0.45);
+}
+/* The playlist's Sort panel: the orders two to a row, then ascending or descending. The chosen
+   cell keeps a soft fill; the menu light glides over the cells like over rows. */
+.sort-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+.sort-cell {
+  position: relative;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 10px;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--ink-hi) / 0.72);
+  transition: color 120ms ease, background-color 150ms ease;
+}
+.sort-cell:focus-visible {
+  outline: none;
+}
+.sort-cell:is(:hover, :focus-visible) {
+  color: rgb(var(--ink-hi));
+}
+.sort-cell.is-on {
+  color: rgb(var(--ink-hi));
+  font-weight: 600;
+  background: rgb(255 255 255 / 0.09);
+}
+.sort-cell svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  opacity: 0.75;
+}
+.sort-cell.is-on svg {
+  opacity: 1;
+}
+/* "Use a song's cover": the playlist's song covers, four to a row; the menu light frames the one under the pointer. */
+.cover-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 56px);
+  gap: 6px;
+  padding: 2px 6px 6px;
+}
+.cover-pick {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  padding: 3px;
+  border-radius: 12px;
+}
+.cover-pick:focus-visible {
+  outline: none;
+}
+.cover-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 9px;
+  display: block;
+}
+.cover-pick.is-on {
+  box-shadow: inset 0 0 0 2px rgb(var(--ink-hi));
 }
 /* What the menu acts on, lit by its cover: the cover blurred into light behind the top of the sheet. */
 .menu-subject {
@@ -2243,16 +2311,111 @@ html.noglass .chrome-glass {
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
 }
 .st-id-avatar {
+  position: relative;
   width: 64px;
   height: 64px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
   font-size: 28px;
   font-weight: 600;
   line-height: 1;
   color: rgb(0 0 0 / 0.85);
+  background: rgb(var(--ink-hi) / 0.08);
   box-shadow: 0 0 0 4px rgb(255 255 255 / 0.06), 0 10px 26px rgb(0 0 0 / 0.4);
+}
+.st-id-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A photo is just the picture: no ring round it, only its shadow. */
+.st-id-avatar.has-photo {
+  background: transparent;
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.4);
+}
+/* The crop frame: the picture moved and zoomed by hand; outside a profile photo's circle, dimmed. */
+.crop-frame {
+  position: relative;
+  overflow: hidden;
+  margin-inline: auto;
+  border-radius: 16px;
+  background: #000;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.crop-frame:active {
+  cursor: grabbing;
+}
+.crop-frame img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+/* Outside a profile photo's circle: dimmed, blurred and greyed, so even a dark picture shows where it
+   ends; the thin guide on the edge marks it where the picture is black anyway. Neither is saved. */
+.crop-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgb(0 0 0 / 0.66);
+  backdrop-filter: blur(3px) saturate(0.5);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent calc(100% - 1px), #000 100%);
+  mask-image: radial-gradient(circle closest-side, transparent calc(100% - 1px), #000 100%);
+}
+.crop-circle {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.85), 0 0 0 1px rgb(0 0 0 / 0.4);
+  pointer-events: none;
+}
+/* The top bar's profile photo glows in its own colours: the photo itself, blurred, behind the button. */
+.avatar-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  /* Small enough to stay inside the bar (about 12px clear below the button); brightness lifts a dark
+     photo's few colours enough to glow at all. */
+  filter: blur(6px) saturate(1.8) brightness(1.35);
+  opacity: 0.9;
+  transform: scale(1.08);
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.avatar-wrap:hover .avatar-glow {
+  opacity: 1;
+}
+/* Pointing at the avatar offers a new photo: a camera over a soft dark veil. */
+.st-id-avatar-edit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgb(0 0 0 / 0.45);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.st-id-avatar-edit svg {
+  width: 22px;
+  height: 22px;
+}
+.st-id-avatar:is(:hover, :focus-visible) .st-id-avatar-edit {
+  opacity: 1;
+}
+.st-id-avatar:focus-visible {
+  outline: 2px solid rgb(var(--ink-hi));
+  outline-offset: 3px;
 }
 /* Where the words run onto the covers, a soft shadow keeps them reading. */
 .st-id-text {

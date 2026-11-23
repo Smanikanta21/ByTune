@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { ContextMenu } from "./components/ContextMenu";
 import { Dialog } from "./components/primitives";
+import { ImageCropDialog } from "./components/ImageCrop";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { prefetchLyrics, LyricsCenter } from "./components/LyricsCenter";
 import { NowPlaying } from "./components/NowPlaying";
@@ -500,6 +501,7 @@ export default function App() {
       <PlayerBar />
       <NowPlaying />
       <Dialog />
+      <ImageCropDialog />
       <PlaylistPicker />
       <ContextMenu />
       <FileDropOverlay />

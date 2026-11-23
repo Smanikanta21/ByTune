@@ -1,5 +1,6 @@
 /** Transient UI state: navigation, panels, toasts, context menu, dialogs. */
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { create } from "zustand";
 import type { SearchFilter, Track } from "../types";
 
@@ -72,6 +73,9 @@ export interface MenuItem {
   /** nested menu — opens on hover/click, one at a time */
   children?: MenuItem[];
   action?: () => void;
+  /** a block of its own in place of a row (the playlist's Sort panel). Its buttons marked
+      data-menu-row and role="menuitem…" get the light and the arrow keys; pressing one keeps the menu open. */
+  node?: ReactNode;
 }
 
 export interface ContextMenuState {

@@ -27,7 +27,7 @@ import { shortTitle } from "../lib/format";
 import { addSongsToPlaylists, staysOnDevice } from "../lib/devicePlaylists";
 import { upgradeArtwork } from "../lib/artwork";
 import { CreateMenu } from "./CreateMenu";
-import { askForNewFolder, folderMenuItems, rowIsOpen } from "../lib/collection";
+import { askForNewFolder, folderMenuItems, playlistThumb, rowIsOpen } from "../lib/collection";
 import { playlistOwnItems } from "../lib/trackActions";
 import { draggingFromPlaylist, dragHasAlbum, dragHasArtist, dragHasPlaylist, dragHasTrack, readAlbum, readArtist, readPlaylist, readTrack, type AlbumPayload, type ArtistPayload, type PlaylistPayload } from "../lib/dnd";
 import { requireBridge } from "../lib/bridge";
@@ -201,7 +201,7 @@ function LibraryPill() {
     id: p.id,
     title: p.name,
     subtitle: subtitleOf(p),
-    thumb: p.artistThumb ?? p.tracks[0]?.thumb,
+    thumb: playlistThumb(p),
     kind: "playlist",
     artistId: p.artistId,
     ...(p.folderId ? { folderId: p.folderId } : {}),
@@ -625,7 +625,7 @@ function LibraryPill() {
       playingFrom !== null && (playingFrom === r.id || playingFrom === r.artistId || filed.some((p) => p.id === playingFrom));
     const open = rowIsOpen(r, view);
     /** a folder's face: its playlists' covers, four up once it has four */
-    const folderArt = [...new Set(filed.map((p) => p.artistThumb ?? p.tracks[0]?.thumb).filter((t): t is string => !!t))].slice(0, 4);
+    const folderArt = [...new Set(filed.map(playlistThumb).filter((t): t is string => !!t))].slice(0, 4);
     return (
       <div
         key={`${r.kind}-${r.id}`}

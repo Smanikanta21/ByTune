@@ -25,6 +25,8 @@ export function upgradeArtwork(url: string | null | undefined, target = 544): st
   if (!url || typeof url !== "string") return "";
   let out = url.trim();
   if (!out || !artworkUrlOk(out)) return "";
+  // An image carried whole (a playlist's own cover): its encoded bytes can spell "50x50" by chance.
+  if (/^data:/i.test(out)) return out;
 
   // Sparse 150px/50px sizes → full 500px art (the largest such rendition).
   out = out.replace(/150x150|50x50/g, "500x500");

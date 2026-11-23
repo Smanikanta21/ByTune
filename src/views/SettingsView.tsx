@@ -20,6 +20,7 @@ import {
   AudioLines,
   BarChart3,
   ChevronRight,
+  Camera,
   ChevronsUpDown,
   CirclePlay,
   Clapperboard,
@@ -66,6 +67,7 @@ import {
 } from "lucide-react";
 import { DOWNLOAD_QUALITY_LABEL, LOUDNESS_LABEL, STREAM_QUALITY_LABEL, useSettings } from "../stores/settings";
 import { isWindows } from "../lib/platform";
+import { pickSquareImage } from "../lib/imagePick";
 import { useLibrary } from "../stores/library";
 import { shownName, useSession } from "../lib/session";
 import { displayNameProblem, normalizeDisplayName } from "../lib/account-validators";
@@ -631,6 +633,18 @@ function IdentityCard({
   const shown = shownName(session);
   const name = shown ?? (signedIn ? "Account" : session.mode === "guest" ? "Guest" : "No account");
   const { color, letter } = avatarFor(session.mode, session.username, shown);
+  const photo = useSettings((s) => s.profilePhoto);
+  // Your own picture: the system picker, then its middle square, small (it syncs with your settings).
+  const choosePhoto = async (): Promise<void> => {
+    try {
+      const picked = await pickSquareImage(256, { title: "Frame your photo", confirmLabel: "Use photo", round: true });
+      if (!picked) return;
+      useSettings.getState().setProfilePhoto(picked);
+      useUI.getState().toast("Photo changed", "success");
+    } catch (err) {
+      useUI.getState().toast(err instanceof Error ? err.message : "ByTune couldn't use that image.", "error");
+    }
+  };
   return (
     <section data-setting-group className="st-group">
       <div data-setting-row className="st-id">
@@ -652,9 +666,19 @@ function IdentityCard({
             })}
           </div>
         )}
-        <span aria-hidden className="st-id-avatar" style={{ backgroundColor: color }}>
-          {letter}
-        </span>
+        <button
+          type="button"
+          className={`st-id-avatar${photo ? " has-photo" : ""}`}
+          style={photo ? undefined : { backgroundColor: color }}
+          onClick={() => void choosePhoto()}
+          title={photo ? "Change photo" : "Add a photo"}
+          aria-label={photo ? "Change photo" : "Add a photo"}
+        >
+          {photo ? <img src={photo} alt="" draggable={false} /> : letter}
+          <span aria-hidden className="st-id-avatar-edit">
+            <Camera />
+          </span>
+        </button>
         <div className="st-id-text">
           <div className="st-id-name">
             <span className="truncate">{name}</span>
@@ -668,6 +692,11 @@ function IdentityCard({
         <div className="st-id-actions">
           {session.mode && <Button onClick={onEditName}>{session.displayName ? "Edit name" : "Add name"}</Button>}
           {signedIn && <Button onClick={onChangeUsername}>Change username</Button>}
+          {photo ? (
+            <Button onClick={() => useSettings.getState().setProfilePhoto("")}>Remove photo</Button>
+          ) : (
+            <Button onClick={() => void choosePhoto()}>Add photo</Button>
+          )}
         </div>
       </div>
     </section>

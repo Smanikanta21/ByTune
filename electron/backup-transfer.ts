@@ -50,7 +50,13 @@ export const SETTINGS_KEYS = new Set([
   "lyricsOffset",
   "loudnessLevel",
   "matchLanguage",
+  "profilePhoto",
 ]);
+
+/** A profile picture from a backup: "" (none) or a small base64 image, nothing bigger or stranger. */
+export function profilePhotoOk(v: unknown): boolean {
+  return v === "" || (typeof v === "string" && v.length <= 400_000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(v));
+}
 
 /** The import language preference: "" (any) or one of the matcher's languages. */
 export function matchLanguageOk(v: unknown): boolean {
@@ -132,7 +138,7 @@ export function settingsFromBackup(incoming: unknown, currentEnvelope: unknown):
       continue;
     }
     // A malformed gains list would break the equalizer and the Settings page.
-    if (k in inc && (k !== "eqGains" || eqGainsOk(inc[k])) && (k !== "eqPresets" || eqPresetsOk(inc[k])) && (k !== "loudnessLevel" || ["off", "quiet", "normal", "loud"].includes(inc[k] as string)) && (k !== "matchLanguage" || matchLanguageOk(inc[k]))) next[k] = inc[k];
+    if (k in inc && (k !== "eqGains" || eqGainsOk(inc[k])) && (k !== "eqPresets" || eqPresetsOk(inc[k])) && (k !== "loudnessLevel" || ["off", "quiet", "normal", "loud"].includes(inc[k] as string)) && (k !== "matchLanguage" || matchLanguageOk(inc[k])) && (k !== "profilePhoto" || profilePhotoOk(inc[k]))) next[k] = inc[k];
   }
   return next;
 }

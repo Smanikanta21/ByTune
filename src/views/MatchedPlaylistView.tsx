@@ -223,8 +223,11 @@ export function MatchedPlaylistView({ spotifyId, importId = "" }: { spotifyId: s
   };
   const save = (): void => {
     if (!playlist) return;
-    const p = useLibrary.getState().importPlaylist(playlist.name, matched);
-    useUI.getState().toast(`Saved “${p.name}” to your library`, "success");
+    // The songs not found (or not checked) stay listed on the saved playlist, to find by hand.
+    const notFound = songs.filter((_, i) => states[i]?.state === "missing" || states[i]?.state === "failed").map((s) => ({ title: s.title, artist: s.artist }));
+    const p = useLibrary.getState().importPlaylist(playlist.name, matched, undefined, notFound);
+    const left = p.missing?.length ?? 0;
+    useUI.getState().toast(`Saved “${p.name}” to your library${left ? `. ${plural(left, "song", "songs")} to find by hand` : ""}`, "success");
     useUI.getState().navigate({ name: "playlist", param: p.id });
   };
   const openMenu = (x: number, y: number): void =>

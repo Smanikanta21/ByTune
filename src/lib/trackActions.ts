@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { downloadAll, startDownload } from "./downloads";
 import { plural } from "./format";
+import { playlistThumb } from "./collection";
 import { playAlbum } from "./album";
 import { playPlaylist } from "./playlist";
 import { copyLink, youtubeAlbumLink, youtubePlaylistLink } from "./playlistShare";
@@ -216,7 +217,7 @@ export function playlistHeaderItems(playlist: Playlist): MenuItem[] {
       subject: {
         title: playlist.name,
         subtitle: `Playlist · ${plural(playlist.tracks.length, "song", "songs")}`,
-        thumb: playlist.artistThumb ?? playlist.tracks[0]?.thumb,
+        thumb: playlistThumb(playlist),
       },
     },
   ];

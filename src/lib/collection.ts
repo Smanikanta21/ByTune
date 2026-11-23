@@ -9,7 +9,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { dragHasAlbum, dragHasPlaylist, readAlbum, readPlaylist } from "./dnd";
 import { requireBridge } from "./bridge";
 import { fmtTotal, plural, shortTitle } from "./format";
-import { useLibrary, type LibraryFolder } from "../stores/library";
+import { useLibrary, type LibraryFolder, type Playlist } from "../stores/library";
 import { useUI, type MenuItem, type View } from "../stores/ui";
 import type { Track } from "../types";
 
@@ -41,6 +41,9 @@ export function folderMenuItems(folder: LibraryFolder, afterDelete?: () => void)
 }
 
 /** Up to `count` covers for a cover wall: each distinct cover once, in order, then round again. */
+/** The one picture a playlist shows as: its own cover, an artist playlist's photo, or its first song's cover. */
+export const playlistThumb = (p: Playlist): string | undefined => p.cover ?? p.artistThumb ?? p.tracks[0]?.thumb;
+
 export function wallCovers(thumbs: ReadonlyArray<string | null | undefined>, count: number): string[] {
   const distinct = [...new Set(thumbs.filter((t): t is string => !!t))];
   return distinct.length ? Array.from({ length: count }, (_, i) => distinct[i % distinct.length]) : [];

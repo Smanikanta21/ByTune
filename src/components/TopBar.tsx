@@ -34,6 +34,7 @@ import { browseMenuItems, trackMenuItems } from "../lib/trackActions";
 import { shownName, useSession } from "../lib/session";
 import { isMac } from "../lib/platform";
 import { avatarFor } from "../lib/avatar";
+import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
 import { usePlayer } from "../stores/player";
 import { useRecents } from "../stores/recents";
@@ -103,24 +104,36 @@ function Avatar({ onClick, active }: { onClick: () => void; active?: boolean }) 
   const mode = useSession((s) => s.mode);
   const username = useSession((s) => s.username);
   const displayName = useSession((s) => s.displayName);
-  // The first letter of the display name (an account without one yet: its username's).
+  const photo = useSettings((s) => s.profilePhoto);
+  // Your own photo, else the first letter of the display name (an account without one yet: its username's).
   const { color, letter } = avatarFor(mode, username, shownName({ mode, username, displayName }));
   return (
-    <button
-      onClick={onClick}
-      title={active ? "Close settings" : "Settings"}
-      aria-label={active ? "Close settings" : "Settings"}
-      className={`w-11 h-11 rounded-full grid place-items-center transition-colors select-none ${
-        active ? "bg-ink-hi/[0.16]" : "bg-ink-hi/[0.10] hover:bg-ink-hi/[0.16]"
-      }`}
-    >
-      <span
-        className="grid h-8 w-8 place-items-center rounded-full text-[15px] font-semibold leading-none text-black/85"
-        style={{ backgroundColor: color }}
+    // isolate: the photo's glow sits behind the button, never behind the bar.
+    <span className="avatar-wrap relative isolate grid place-items-center">
+      {photo && <img aria-hidden src={photo} alt="" draggable={false} className="avatar-glow" />}
+      <button
+        onClick={onClick}
+        title={active ? "Close settings" : "Settings"}
+        aria-label={active ? "Close settings" : "Settings"}
+        className={`w-11 h-11 rounded-full grid place-items-center select-none ${
+          // A photo is the whole button, nothing round it; the letter sits in its soft circle.
+          photo
+            ? `overflow-hidden transition-[filter] hover:brightness-110 ${active ? "brightness-110" : ""}`
+            : `transition-colors ${active ? "bg-ink-hi/[0.16]" : "bg-ink-hi/[0.10] hover:bg-ink-hi/[0.16]"}`
+        }`}
       >
-        {letter}
-      </span>
-    </button>
+        {photo ? (
+          <img src={photo} alt="" draggable={false} className="h-full w-full object-cover" />
+        ) : (
+          <span
+            className="grid h-8 w-8 place-items-center rounded-full text-[15px] font-semibold leading-none text-black/85"
+            style={{ backgroundColor: color }}
+          >
+            {letter}
+          </span>
+        )}
+      </button>
+    </span>
   );
 }
 
