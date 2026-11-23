@@ -2,7 +2,8 @@
  * ByTune's menus (src/components/ContextMenu.tsx) in jsdom with the real stores:
  * - rows, sentence-case captions and hairlines between groups (never first, never two together); a
  *   destructive row is red, and the menu's one light goes to the row under the pointer, red there too;
- * - a song's menu opens with the song at its top, wherever its builder put it;
+ * - a song's menu opens with the song at its top, wherever its builder put it; its playlists sit in
+ *   "Add to playlists"' own menu;
  * - a picker's choices are real choices, the chosen one checked at the right; a row with a second line
  *   shows its icon in a tile;
  * - a row's own menu opens beside it, Escape folds it and then closes the menu; the arrow keys walk the
@@ -132,6 +133,21 @@ test("a song's menu opens with the song at its top, wherever its builder put it"
   } finally {
     await h.close();
   }
+});
+
+test("a song's playlists sit in Add to playlists' own menu, the several-at-once picker last when there are two", () => {
+  const song = { id: "abc123", title: "Nicole Kidman", artist: "ADÉLA", duration: 182, thumb: "" };
+  const menuWith = (names) => {
+    useLibrary.setState({ playlists: names.map((name, i) => ({ id: `p${i}`, name, tracks: [] })), liked: [], downloads: {} });
+    return trackMenuItems(song);
+  };
+  const flyout = (items) => items.find((i) => i.label === "Add to playlists")?.children.map((c) => c.label);
+  assert.equal(flyout(menuWith([])), undefined, "no playlists, no row");
+  assert.deepEqual(flyout(menuWith(["chills"])), ["chills"]);
+  const items = menuWith(["chills", "Road trip"]);
+  assert.deepEqual(flyout(items), ["chills", "Road trip", "Choose several"]);
+  assert.ok(!items.some((i) => i.label?.startsWith("Add to \"")), "no playlist rows on the menu itself");
+  useLibrary.setState({ playlists: [] });
 });
 
 test("a picker's choices are real choices, the chosen one checked at the right; a second line puts the icon in a tile", async () => {

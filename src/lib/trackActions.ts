@@ -13,8 +13,6 @@ import {
   RotateCcw,
   Trash2,
   User,
-  ArrowDown,
-  ArrowUp,
 } from "lucide-react";
 import { downloadAll, startDownload } from "./downloads";
 import { plural } from "./format";
@@ -65,21 +63,23 @@ export function trackMenuItems(track: Track): MenuItem[] {
     },
   ];
 
-  const playlists = lib.playlists.slice(0, 6);
-  for (const p of playlists) {
-    items.push({
-      label: `Add to "${p.name}"`,
-      action: () => {
-        const { added, told } = addSongsToPlaylists([p.id], [track]);
-        if (!told) useUI.getState().toast(added ? `Added to "${p.name}"` : "Already in this playlist");
-      },
-    });
-  }
-  if (lib.playlists.length > 1) {
+  // Every playlist in the row's own menu (›); with two or more, the picker adds to several at once.
+  if (lib.playlists.length) {
     items.push({
       label: "Add to playlists",
       icon: ListPlus,
-      action: () => useUI.getState().openPlaylistPicker([track]),
+      children: [
+        ...lib.playlists.map((p): MenuItem => ({
+          label: p.name,
+          action: () => {
+            const { added, told } = addSongsToPlaylists([p.id], [track]);
+            if (!told) useUI.getState().toast(added ? `Added to "${p.name}"` : "Already in this playlist");
+          },
+        })),
+        ...(lib.playlists.length > 1
+          ? [{ separatorBefore: true, label: "Choose several", icon: ListPlus, action: () => useUI.getState().openPlaylistPicker([track]) }]
+          : []),
+      ],
     });
   }
   items.push({
@@ -162,26 +162,11 @@ function requireReveal(path: string): void {
 }
 
 export function playlistMenuItems(playlist: Playlist, track: Track): MenuItem[] {
-  const tracks = useLibrary.getState().getPlaylist(playlist.id)?.tracks ?? playlist.tracks;
-  const at = tracks.findIndex((t) => t.id === track.id);
-  const move = (to: number): void => useLibrary.getState().moveInPlaylist(playlist.id, at, to);
-  const last = tracks.length - 1;
-  const moves: MenuItem[] =
-    at < 0 || tracks.length < 2
-      ? []
-      : [
-          { label: "Move up", icon: ArrowUp, disabled: at === 0, action: () => move(at - 1) },
-          { label: "Move down", icon: ArrowDown, disabled: at === last, action: () => move(at + 1) },
-          { label: "Move to top", disabled: at === 0, action: () => move(0) },
-          { label: "Move to bottom", disabled: at === last, action: () => move(last) },
-        ];
   return [
-    ...moves,
     {
       label: "Remove from this playlist",
       icon: Trash2,
       danger: true,
-      separatorBefore: moves.length > 0,
       action: () => {
         useLibrary.getState().removeFromPlaylist(playlist.id, track.id);
         useUI.getState().toast("Removed from playlist");

@@ -94,7 +94,7 @@ interface LibraryState {
   deletePlaylist(id: string): void;
   addToPlaylist(playlistId: string, track: Track): boolean;
   removeFromPlaylist(playlistId: string, trackId: string): void;
-  /** Move one song inside a playlist (drag, or Move up/down). */
+  /** Move one song inside a playlist (drag). */
   moveInPlaylist(playlistId: string, from: number, to: number): void;
   getPlaylist(id: string): Playlist | null;
   createFolder(name: string): LibraryFolder;
