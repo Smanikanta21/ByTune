@@ -748,6 +748,8 @@ function LibraryPill({ rail }: { rail: boolean }) {
 
   return (
     <div
+      // Folded, a dragged song's card waits beside the rail instead of over its covers (useSortable).
+      data-drop-rail={rail ? "" : undefined}
       className={`relative flex-1 min-h-0 flex flex-col glass-pill rounded-2xl overflow-hidden shadow-pill transition-shadow ${
         libHover ? "shadow-[0_0_44px_rgb(var(--accent)/0.14)]" : ""
       }`}

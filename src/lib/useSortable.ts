@@ -156,6 +156,9 @@ export function useSortable(opts: {
     () => () => {
       window.cancelAnimationFrame(raf.current);
       release(); // a hold still waiting must not lift a row that's gone
+      // The list can go mid-drag (a folder opens under the song): its floating copy goes with it.
+      ghost.current?.el.remove();
+      ghost.current = null;
     },
     [],
   );
@@ -355,6 +358,10 @@ export function useSortable(opts: {
     } else {
       // Compact, held by its cover: it stays on screen wherever the row was grabbed.
       tx = x - startX + g.grabX - Math.min(g.grabX, 56);
+      // Over a column of covers too narrow to see past the card (the folded library, marked
+      // `data-drop-rail`), the card would hide the very cover being aimed at: it waits beside it.
+      const rail = document.querySelector<HTMLElement>("[data-drop-rail]")?.getBoundingClientRect();
+      if (rail && x >= rail.left && x <= rail.right && y >= rail.top && y <= rail.bottom) tx = rail.right + 8 - g.rect.left;
     }
     g.el.style.transform = `translate(${tx}px, ${ty}px) scale(1.02)`;
     let target = d.from; // outside the list nothing moves

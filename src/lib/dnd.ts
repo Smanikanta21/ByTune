@@ -315,6 +315,19 @@ export function useDrag(
   const downOnControl = useRef(false);
   /** The element the drag props are spread on — the exclusion boundary. */
   const rootRef = useRef<HTMLElement | null>(null);
+  /**
+   * This source's drag is under way. A source can go before its drag ends (hovering a folder
+   * opens its page under a playlist's song), and a source that's gone never hears dragend:
+   * it clears the page-wide grabbing cursor itself.
+   */
+  const active = useRef(false);
+  useEffect(
+    () => () => {
+      if (suppressTimer.current !== null) window.clearTimeout(suppressTimer.current);
+      if (active.current) document.body.classList.remove("bytune-dragging");
+    },
+    [],
+  );
 
   const clearSuppress = (): void => {
     suppressClick.current = false;
@@ -355,11 +368,13 @@ export function useDrag(
         else beginAlbumDrag(e, payload.album);
         fromPlaylist = ("track" in payload && payload.fromPlaylist) || null;
         suppressClick.current = true;
+        active.current = true;
         document.body.classList.add("bytune-dragging");
         setDragging(true);
       },
       onDragEnd: () => {
         fromPlaylist = null;
+        active.current = false;
         downOnControl.current = false;
         setDragging(false);
         // The browser suppresses the post-drag click itself in the common
