@@ -1208,7 +1208,7 @@ function DisplayPane() {
         <Row
           icon={Columns3}
           title="Panel widths"
-          note="Drag the dividers beside Library and Now Playing to resize. Widths are remembered on this device; double-click a divider to reset that panel."
+          note="Drag the edges beside Your Library and Now Playing to resize them, or drag Your Library all the way in to fold it to its covers. Sizes stay on this device; double-click an edge to reset it."
           control={<Button disabled={!hydrated} onClick={() => { resetWidths(); useUI.getState().toast("Panel widths reset"); }}>Reset widths</Button>}
         />
       </Group>

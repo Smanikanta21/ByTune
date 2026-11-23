@@ -602,7 +602,8 @@ function AboutArtistCard({
           <BadgeCheck className="w-[18px] h-[18px] shrink-0 text-[#4cb3ff]" fill="#4cb3ff" stroke="#0a0a0a" />
         </div>
 
-        <div className="flex items-center justify-between gap-3 mt-2.5">
+        {/* A narrow panel puts View profile under the listeners instead of over them. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mt-2.5">
           <FitText text={listeners ?? about.subscriberCount ?? "Artist"} className="text-[13px] text-ink-hi/70" />
           <button
             onClick={(e) => {

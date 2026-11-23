@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { isPinned, useLibrary, type PinnedSingleKey, type Playlist } from "../stores/library";
 import { useSettings } from "../stores/settings";
+import { usePanelLayout } from "../stores/panelLayout";
 import { playingFromRow, usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import { EqBars } from "./primitives";
@@ -69,7 +70,8 @@ interface Entry {
   rows: LibRow[];
 }
 
-function LibraryPill() {
+/** `rail`: folded to a column of covers (drag the divider in, or press Enter on it). */
+function LibraryPill({ rail }: { rail: boolean }) {
   const liked = useLibrary((s) => s.liked);
   const playlists = useLibrary((s) => s.playlists);
   const folders = useLibrary((s) => s.folders);
@@ -652,6 +654,9 @@ function LibraryPill() {
         role="button"
         tabIndex={0}
         aria-current={open ? "page" : undefined}
+        // The rail shows covers only: the name is the tooltip and what a screen reader says.
+        aria-label={rail ? r.title : undefined}
+        title={rail ? r.title : undefined}
         onClick={() => onClickRow(r)}
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
@@ -664,7 +669,7 @@ function LibraryPill() {
         onDragLeave={(e) => onRowDragLeave(e, r)}
         onDrop={(e) => onRowDrop(e, r)}
         // The open page's row keeps the hover's light, a touch stronger, so it reads as "you're here".
-        className={`fit-host group w-full flex items-center gap-3 p-2 rounded-lg text-left cursor-pointer select-none ${
+        className={`fit-host group relative w-full flex items-center ${rail ? "justify-center" : "gap-3"} p-2 rounded-lg text-left cursor-pointer select-none ${
           open ? "bg-ink-hi/[0.08]" : "hover:bg-ink-hi/[0.05]"
         } active:bg-ink-hi/[0.1] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
           dropHover === r.id ? "ring-2 ring-inset ring-accent/60 bg-ink-hi/[0.08] scale-[1.02]" : ""
@@ -716,16 +721,26 @@ function LibraryPill() {
             )}
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <FitText text={r.title} className="text-[14px] font-semibold text-ink-hi" />
-          <FitText text={r.subtitle} className="text-[12.5px] text-ink-hi/55 mt-0.5" />
-        </div>
-        {isCurrent && <EqBars />}
-        {((r.singleKey && r.pinned) ||
-          (r.kind === "playlist" &&
-            !r.singleKey &&
-            playlists.find((p) => p.id === r.id)?.pinned)) && (
-          <Pin className="w-3.5 h-3.5 text-accent shrink-0 fill-accent/20" aria-label="Pinned" />
+        {rail ? (
+          isCurrent && (
+            <span className="absolute right-1 bottom-1 grid place-items-center w-5 h-5 rounded-full bg-black/75">
+              <EqBars />
+            </span>
+          )
+        ) : (
+          <>
+            <div className="min-w-0 flex-1">
+              <FitText text={r.title} className="text-[14px] font-semibold text-ink-hi" />
+              <FitText text={r.subtitle} className="text-[12.5px] text-ink-hi/55 mt-0.5" />
+            </div>
+            {isCurrent && <EqBars />}
+            {((r.singleKey && r.pinned) ||
+              (r.kind === "playlist" &&
+                !r.singleKey &&
+                playlists.find((p) => p.id === r.id)?.pinned)) && (
+              <Pin className="w-3.5 h-3.5 text-accent shrink-0 fill-accent/20" aria-label="Pinned" />
+            )}
+          </>
         )}
       </div>
     );
@@ -781,25 +796,42 @@ function LibraryPill() {
         />
       )}
       {/* Header */}
-      <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-        <button
-          onClick={() => navigate({ name: "library" })}
-          className="flex items-center gap-2 text-[14px] font-semibold text-ink-hi/75 hover:text-ink-hi transition-colors"
-        >
-          <Library className="w-4 h-4" />
-          Your Library
-        </button>
-        <div className="ml-auto flex items-center gap-1">
-          {/* + opens Spotify's create dropdown — Playlist / Folder, no modal. */}
+      {rail ? (
+        <div className="flex flex-col items-center gap-1 pt-3 pb-1">
+          <button
+            onClick={() => usePanelLayout.getState().setLibraryFolded(false)}
+            title="Open Your Library"
+            aria-label="Open Your Library"
+            className="grid place-items-center w-10 h-10 rounded-full text-ink-hi/75 hover:text-ink-hi hover:bg-ink-hi/[0.06] transition-colors"
+          >
+            <Library className="w-5 h-5" />
+          </button>
           <CreateMenu />
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+          <button
+            onClick={() => navigate({ name: "library" })}
+            className="flex items-center gap-2 text-[14px] font-semibold text-ink-hi/75 hover:text-ink-hi transition-colors"
+          >
+            <Library className="w-4 h-4" />
+            Your Library
+          </button>
+          <div className="ml-auto flex items-center gap-1">
+            {/* + opens the create dropdown — Playlist / Folder, no modal. */}
+            <CreateMenu />
+          </div>
+        </div>
+      )}
 
       {/* Rows — drops bubble to the panel root, which imports playlists and
           artists anywhere they land; specific rows handle their own targets. */}
-      <div ref={scrollRef} className="edge-fades flex-1 min-h-0 overflow-y-auto px-2 pb-2 pt-1">
+      {/* The rail is 80px less the pill's 0.5px borders: a 10px scrollbar would squeeze its
+          48px covers, so it scrolls without one (the edge fades show there's more), and its
+          sides are a little narrower. */}
+      <div ref={scrollRef} className={`edge-fades flex-1 min-h-0 overflow-y-auto pb-2 pt-1 ${rail ? "no-scrollbar px-1.5" : "px-2"}`}>
         {entries.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[13px] text-ink-hi/55">
+          !rail && <div className="px-3 py-8 text-center text-[13px] text-ink-hi/55">
             Nothing here yet — play a track to fill your library.
           </div>
         ) : (
@@ -827,10 +859,10 @@ function LibraryPill() {
 
 /* ============================================================ root */
 
-export function Sidebar() {
+export function Sidebar({ rail = false }: { rail?: boolean }) {
   return (
     <aside id="library-panel" className="min-w-0 flex flex-col min-h-0">
-      <LibraryPill />
+      <LibraryPill rail={rail} />
     </aside>
   );
 }

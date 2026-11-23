@@ -42,7 +42,7 @@ test("drag updates are coalesced and the latest widths flush on close and restor
     assert.equal(h.writes.length, 0, "pointer moves do not write every frame");
     h.flush();
     assert.equal(h.writes.length, 1);
-    assert.deepEqual(h.saved(), { state: { widths: { library: 450, nowPlaying: 360 } }, version: 0 });
+    assert.deepEqual(h.saved(), { state: { widths: { library: 450, nowPlaying: 360 }, libraryFolded: false }, version: 0 });
     const reopened = await load(h.saved());
     assert.deepEqual(reopened.store.getState().widths, { library: 450, nowPlaying: 360 });
   } finally { h.flush(); }
@@ -69,4 +69,19 @@ test("reset persists both defaults, and unchanged widths cause no extra writes",
     h.flush();
     assert.equal(h.writes.length, 1);
   } finally { h.flush(); }
+});
+
+test("a folded library stays folded after a restart, damaged values read as open, and reset opens it", async () => {
+  const h = await load({ state: { widths: { library: 400, nowPlaying: 360 }, libraryFolded: true }, version: 0 });
+  try {
+    assert.equal(h.store.getState().libraryFolded, true);
+    assert.deepEqual(h.store.getState().widths, { library: 400, nowPlaying: 360 }, "folding keeps the list's width");
+    h.store.getState().resetWidths();
+    h.flush();
+    assert.deepEqual(h.saved().state, { widths: { library: 328, nowPlaying: 328 }, libraryFolded: false });
+  } finally { h.flush(); }
+  for (const damaged of ["yes", 1, null]) {
+    const d = await load({ state: { widths: { library: 400, nowPlaying: 360 }, libraryFolded: damaged }, version: 0 });
+    try { assert.equal(d.store.getState().libraryFolded, false); } finally { d.flush(); }
+  }
 });

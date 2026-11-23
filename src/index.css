@@ -96,6 +96,19 @@ body,
   cursor: col-resize !important;
   user-select: none !important;
 }
+/* Your Library folding into its rail or opening out of it glides (ResizablePanels' SNAP_MS);
+   a drag's own moves follow the pointer at once. */
+.panels-snap {
+  transition: grid-template-columns 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html.reduce-motion .panels-snap {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panels-snap {
+    transition: none;
+  }
+}
 
 body {
   @apply bg-base text-ink antialiased font-sans;

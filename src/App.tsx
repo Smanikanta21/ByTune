@@ -447,8 +447,8 @@ export default function App() {
     >
       <TopBar />
       {/* Three-pane shell: sidebar · content · right rail, over a black canvas.
-          The 8px gaps are draggable; 4px strip above the play bar. */}
-      <ResizablePanels library={<Sidebar />} nowPlaying={<RightRail />}>
+          The 8px gaps are draggable, and Your Library folds to a rail of covers; 4px strip above the play bar. */}
+      <ResizablePanels library={(rail) => <Sidebar rail={rail} />} nowPlaying={<RightRail />}>
         <main
           className="flex-1 min-w-0 flex flex-col bg-surface rounded-2xl overflow-hidden relative"
           {...panelDrop.props}

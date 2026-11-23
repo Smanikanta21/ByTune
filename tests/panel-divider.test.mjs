@@ -31,14 +31,17 @@ async function mount(side = "left") {
   dom.window.HTMLElement.prototype.hasPointerCapture = (id) => captures.has(id);
   dom.window.HTMLElement.prototype.releasePointerCapture = (id) => captures.delete(id);
   let updates = 0;
+  let toggles = 0;
   let changeProps;
   function Harness() {
     const [value, setValue] = useState(328);
     const [options, setOptions] = useState({ max: 480, disabled: false });
     changeProps = setOptions;
     return React.createElement(PanelDivider, {
-      side, value, min: 240, ...options, label: "Library panel", controls: "library-panel",
-      onResize: (next) => { updates++; setValue(next); }, onReset: () => setValue(328),
+      side, value, min: 240, ...options, label: "Library panel", controls: "library-panel", hint: "Drag to resize",
+      // The shell owns the limits now (it also decides folding); this one clamps the same way.
+      onResize: (next) => { updates++; setValue(Math.min(options.max, Math.max(240, next))); }, onReset: () => setValue(328),
+      onToggle: options.toggle ? () => { toggles++; } : undefined,
     });
   }
   const root = createRoot(document.getElementById("root"));
@@ -55,6 +58,7 @@ async function mount(side = "left") {
     divider, captures, pointer,
     value: () => Number(divider.getAttribute("aria-valuenow")),
     updates: () => updates,
+    toggles: () => toggles,
     props: (options) => act(async () => changeProps((prev) => ({ ...prev, ...options }))),
     key: (key, options = {}) => act(async () => divider.dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...options }))),
     unmount: () => act(async () => root.unmount()),
@@ -68,7 +72,7 @@ test("each divider follows the pointer in the correct direction and stops at its
     try {
       const sign = side === "left" ? 1 : -1;
       await h.pointer("pointerdown", 500);
-      assert.equal(document.activeElement, h.divider);
+      assert.notEqual(document.activeElement, h.divider, "a mouse drag leaves focus where it was, so arrows still seek");
       assert.ok(h.captures.has(1));
       assert.ok(document.documentElement.classList.contains("panel-resizing"));
       await h.pointer("pointermove", 500 + 40 * sign);
@@ -121,17 +125,32 @@ test("keyboard resizing is accessible, bounded, and does not reach playback shor
       assert.equal(h.value(), 480);
       await h.key("Home");
       assert.equal(h.value(), 240);
-      await h.key("Enter");
-      assert.equal(h.value(), 328);
       assert.equal(bubbled, 0, "resize keys must not also seek or skip tracks");
+      await h.key("Enter");
+      assert.equal(h.value(), 240, "Enter never wipes a width");
+      assert.equal(bubbled, 1, "with nothing to fold, Enter is left to the app");
       await h.key("ArrowLeft", { altKey: true });
-      assert.equal(h.value(), 328);
-      assert.equal(bubbled, 1, "modified app navigation still works");
+      assert.equal(h.value(), 240);
+      assert.equal(bubbled, 2, "modified app navigation still works");
       await h.key("End");
       await act(async () => h.divider.dispatchEvent(new window.MouseEvent("dblclick", { bubbles: true })));
       assert.equal(h.value(), 328);
     } finally { await h.unmount(); h.close(); }
   }
+});
+
+test("Enter folds or opens a panel that can fold, and stays with the divider", async () => {
+  const h = await mount("left");
+  let bubbled = 0;
+  window.addEventListener("keydown", () => bubbled++);
+  try {
+    await h.props({ toggle: true });
+    await h.key("Enter");
+    await h.key("Enter");
+    assert.equal(h.toggles(), 2);
+    assert.equal(bubbled, 0);
+    assert.equal(h.value(), 328);
+  } finally { await h.unmount(); h.close(); }
 });
 
 test("a changed window limit applies during an ongoing drag, and Escape restores the starting width", async () => {
