@@ -46,7 +46,19 @@ test("the embed page gives the name, cover, songs and its anonymous token", () =
   assert.equal(p.songs.length, 3);
   assert.deepEqual(p.songs[0], { spotifyId: "7bxaFZ1O3cHkgLKMsdC3xR", title: "Loser", artist: "Tame Impala", duration: 223, explicit: true });
   assert.throws(() => parseEmbedPage("<html>Page not found</html>"), SpotifyFormatError);
-  assert.throws(() => parseEmbedPage('<script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{}}}</script>'), /private or no longer exists/);
+});
+
+test("a playlist page without its playlist never claims it was deleted", () => {
+  const page = (pageProps) => `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps } })}</script>`;
+  const notFound = /may be private, or Spotify may not be available where you are/;
+  // A missing or private playlist, and possibly a country without Spotify: Spotify's "Page not found".
+  assert.throws(() => parseEmbedPage(page({ status: 404, title: "Page not found", description: "We can’t seem to find the page you are looking for." })), notFound);
+  assert.throws(() => parseEmbedPage(page({})), notFound);
+  // Its other error pages explain themselves.
+  assert.throws(
+    () => parseEmbedPage(page({ status: 500, title: "Page not available", description: "Something went wrong, please try again later." })),
+    /Spotify couldn't open that playlist: Something went wrong, please try again later\./
+  );
 });
 
 test("a playlist page gives full songs: album, cover, length, explicit", () => {

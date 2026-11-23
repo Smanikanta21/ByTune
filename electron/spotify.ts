@@ -164,7 +164,7 @@ export async function publicPlaylist(link: string): Promise<ImportedPlaylist> {
   const id = web.spotifyPlaylistId(link) ?? (web.isSpotifyShortLink(link) ? await followShortLink(link) : null);
   if (!id) throw new Error("That isn't a link to a Spotify playlist.");
   const res = await get(`${WEB}/embed/playlist/${id}`);
-  if (res.status === 404) throw new Error("That playlist is private or no longer exists.");
+  if (res.status === 404) throw new Error(web.PLAYLIST_NOT_FOUND);
   if (!res.ok) throw new Error(`Spotify didn't answer (HTTP ${res.status}). Try again in a moment.`);
   const { token, ...embed } = web.parseEmbedPage(await res.text());
   // The embed lists only the first 100 songs, without albums or covers; the web player's
@@ -388,8 +388,9 @@ async function openSignIn(parent: BrowserWindow | null): Promise<SpotifyStatus> 
   });
   signInWindow = win;
   lockDown(win.webContents);
-  return new Promise<SpotifyStatus>((resolve) => {
+  return new Promise<SpotifyStatus>((resolve, reject) => {
     let done = false;
+    let failed: string | null = null;
     const finish = async (cookie: string | null): Promise<void> => {
       if (done) return;
       done = true;
@@ -407,13 +408,31 @@ async function openSignIn(parent: BrowserWindow | null): Promise<SpotifyStatus> 
       signInWindow = null;
       // The sealed copy is the only one kept.
       await ses.clearStorageData().catch(() => undefined);
-      resolve(spotifyStatus());
+      if (failed) reject(new Error(failed));
+      else resolve(spotifyStatus());
     };
     const onCookie = (_e: Electron.Event, cookie: Electron.Cookie, _cause: string, removed: boolean): void => {
       const domain = (cookie.domain ?? "").replace(/^\./, "");
       if (!removed && cookie.name === "sp_dc" && /(^|\.)spotify\.com$/.test(domain) && COOKIE.test(cookie.value)) void finish(cookie.value);
     };
     ses.cookies.on("changed", onCookie);
+    // A sign-in page that never shows (unreachable, blocked, or sent outside the sign-in where Spotify
+    // isn't available) left a blank window: close it and say why instead.
+    let shown = false;
+    const neverShown = (): void => {
+      if (shown) return;
+      failed = "Spotify's sign-in page didn't open. Spotify may not be available where you are, or your network may be blocking it.";
+      void finish(null);
+    };
+    win.webContents.once("did-finish-load", () => (shown = true));
+    // -3 is a load replaced by the next one, which a working sign-in does too.
+    win.webContents.on("did-fail-load", (_e, code, _description, _url, isMainFrame) => {
+      if (isMainFrame && code !== -3) neverShown();
+    });
+    // lockDown stops a redirect out of the sign-in, which would leave the window blank as well.
+    win.webContents.on("will-redirect", (event) => {
+      if (event.isMainFrame && !signInUrl(event.url)) neverShown();
+    });
     win.on("closed", () => void finish(null));
     void win.loadURL(`https://accounts.spotify.com/login?continue=${encodeURIComponent(`${WEB}/`)}`).catch(() => undefined);
   });

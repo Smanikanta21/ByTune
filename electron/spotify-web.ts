@@ -88,6 +88,10 @@ function songOf(data: unknown, uri: unknown): ImportSong | null {
   };
 }
 
+/** Spotify answers a missing or private playlist with its "Page not found" page, and can answer the same
+ *  where Spotify isn't available at all, so this can't say which. */
+export const PLAYLIST_NOT_FOUND = "Spotify couldn't find that playlist. It may be private, or Spotify may not be available where you are.";
+
 /** The public playlist an embed page shows: up to its first 100 songs, and the anonymous token it hands out. */
 export function parseEmbedPage(html: string): ImportedPlaylist & { token: string | null } {
   const data = /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
@@ -100,7 +104,12 @@ export function parseEmbedPage(html: string): ImportedPlaylist & { token: string
   }
   const state = at(root, "props", "pageProps", "state");
   const entity = obj(at(state, "data", "entity"));
-  if (!entity) throw new SpotifyFormatError("That playlist is private or no longer exists");
+  if (!entity) {
+    // Spotify's other error pages (status 500…) say what went wrong in their own words.
+    const page = obj(at(root, "props", "pageProps"));
+    const said = page && page.status !== 404 ? str(page.description) ?? str(page.title) : undefined;
+    throw new SpotifyFormatError(said ? `Spotify couldn't open that playlist: ${said}` : PLAYLIST_NOT_FOUND);
+  }
   const songs = arr(entity.trackList).flatMap((t): ImportSong[] => {
     const title = str(at(t, "title"));
     const spotifyId = trackId(at(t, "uri"));
