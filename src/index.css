@@ -744,6 +744,146 @@ body.bytune-dragging * {
   background: transparent;
 }
 
+/* ---------- synced lyrics (SyncedLyrics; the motion is lib/lyricMotion) ----------
+   Rows sit back from the one being sung, dimmer, a touch smaller and softer,
+   all three on one curve. Words still to be sung show at --ly-tail; the frame
+   loop marks each piece of the line being sung lit, unsung, or the soft edge
+   between them. Sizes are in em of the line's type, given at 34px. */
+@property --ly-tail {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.45;
+}
+.ly-row {
+  padding-block: var(--ly-pad, 10px);
+  transform-origin: left center;
+  transition:
+    opacity 400ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    filter 400ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    scale 400ms cubic-bezier(0.41, 0, 0.12, 0.99);
+}
+/* A line being pressed dips, the way a button does. */
+.ly-row:active {
+  scale: 0.96 !important;
+  transition-duration: 400ms, 400ms, 120ms;
+}
+.ly-voice,
+.ly-plain {
+  transition: --ly-tail 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ly-voice {
+  position: relative;
+  display: block;
+}
+.ly-ink,
+.ly-plain {
+  display: block;
+}
+.ly-plain {
+  color: rgb(var(--ink-hi) / var(--ly-tail));
+}
+.ly-word,
+.ly-letter {
+  display: inline-block;
+}
+.ly-unit {
+  color: rgb(var(--ink-hi) / var(--ly-tail));
+}
+.ly-unit[data-ink="lit"] {
+  color: rgb(var(--ink-hi));
+}
+.ly-unit[data-ink="edge"] {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* The glow: the same line again, blurred, with only the held letters showing. */
+.ly-bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  filter: blur(0.1019em);
+  transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ly-bloom .ly-unit {
+  color: transparent;
+}
+/* The answering vocal: room opens under its line as it's due, the words a
+   little smaller and a shade back, rising the last few pixels into place. */
+.ly-backing {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 450ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ly-backing[data-open] {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 400ms cubic-bezier(0.41, 0, 0.12, 0.99);
+}
+.ly-backing-inner {
+  min-height: 0;
+  overflow: hidden;
+  font-size: calc(23em / 34);
+  line-height: calc(29 / 23);
+  opacity: 0;
+  translate: 0 calc(6em / 23);
+  scale: 0.94;
+  transform-origin: left top;
+  transition:
+    opacity 450ms cubic-bezier(0.4, 0, 0.2, 1),
+    translate 450ms cubic-bezier(0.4, 0, 0.2, 1),
+    scale 450ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ly-backing[data-open] > .ly-backing-inner {
+  opacity: 0.72;
+  translate: 0 0;
+  scale: 1;
+  transition:
+    opacity 250ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    translate 400ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    scale 400ms cubic-bezier(0.41, 0, 0.12, 0.99);
+}
+/* A break takes no room until it plays; then three dots fill across it. */
+.ly-break {
+  height: 0;
+  padding-block: 0;
+  overflow: hidden;
+  opacity: 0;
+  scale: 0.76;
+  transition:
+    height 350ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    padding 350ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    opacity 350ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    filter 400ms cubic-bezier(0.41, 0, 0.12, 0.99),
+    scale 350ms cubic-bezier(0.41, 0, 0.12, 0.99);
+}
+.ly-break[data-open] {
+  height: calc(40em / 34 + 2 * var(--ly-pad, 10px));
+  padding-block: var(--ly-pad, 10px);
+  opacity: var(--ly-light, 1);
+  scale: 1;
+  transition-duration: 400ms;
+}
+.ly-dots {
+  display: flex;
+  align-items: center;
+  gap: calc(5em / 34);
+  height: 100%;
+}
+.ly-dot {
+  width: calc(13em / 34);
+  height: calc(13em / 34);
+  border-radius: 999px;
+  background: rgb(var(--ink-hi));
+  opacity: 0.25;
+}
+/* Reduce animation: nothing opens or folds, it's simply there or not. */
+.lyrics-lines[data-still] .ly-backing,
+.lyrics-lines[data-still] .ly-backing-inner,
+.lyrics-lines[data-still] .ly-break {
+  transition: none;
+}
+
 /* hide scrollbar but keep scrolling (pills rows) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

@@ -117,7 +117,8 @@ test('visible unfocused lyrics advance line and word sweep; hidden/minimized lyr
   await p.native('unfocused');
   await p.setPosition(4); await p.frame();
   assert.equal(p.activeLine(), 'Line 1');
-  const sweep = () => p.w.document.querySelector('.lyrics-lines button[style*="opacity: 1;"] span span').style.backgroundImage;
+  // The swept piece of the live line: its gradient is the edge between sung and unsung.
+  const sweep = () => p.w.document.querySelector('.lyrics-lines button[style*="opacity: 1;"] .ly-unit').style.backgroundImage;
   const first = sweep();
   await p.setPosition(5); await p.frame();
   assert.notEqual(sweep(), first);
