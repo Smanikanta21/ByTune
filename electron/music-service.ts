@@ -19,7 +19,7 @@ import { pickAudio, streamTtlMs } from "./audio-format";
 import { embeddedLrc, fetchLyrics } from "./lyrics";
 import { largestThumbUrl, upgradeThumb } from "./artwork";
 import { getPoToken, invalidatePoToken } from "./po-token";
-import { resolveMarket, type ResolvedMarket } from "./market";
+import { DEFAULT_MARKET, rejectsMarket, resolveMarket, type ResolvedMarket } from "./market";
 import { SEARCH_FILTER_PARAMS, callBrowse, callBrowseContinuation, callSearch, callSearchContinuation, callSearchSuggestions, parseArtistPage, parseChartsShelves, pageCredit, parseMoodCovers, parseMoodPage, parseMoods, parsePodcastEpisodes, parsePodcastPage, parsePodcastShelves, parsePlaylistContinuation, parsePlaylistShelf, parseQueueCredits, parseRadioPage, parseRemotePlaylistPage, parseReleasePage, parseSearchPage, parseSearchSuggestions } from "./ytm";
 import type { Credits, ParsedSong } from "./ytm";
 import type { MoodEntry } from "./moods";
@@ -127,19 +127,23 @@ async function createSession(): Promise<any> {
   });
   const visitorData: string | undefined = bootstrap?.session?.context?.client?.visitorData;
 
-  // Phase 2: mint a PO token bound to that visitor data.
-  let poToken: string | undefined;
-  if (visitorData) {
+  // Phase 2: mint a PO token bound to that visitor data and, at the same time,
+  // check that YouTube Music serves this market at all.
+  const mintToken = async (): Promise<string | undefined> => {
+    if (!visitorData) return undefined;
     try {
-      poToken = await getPoToken(visitorData);
+      const token = await getPoToken(visitorData);
       console.log("[bytune] PO token ready");
+      return token;
     } catch (err) {
       console.warn(
         "[bytune] PO token minting failed, continuing without:",
         err instanceof Error ? err.message : err
       );
+      return undefined;
     }
-  }
+  };
+  const [poToken, gl] = await Promise.all([mintToken(), servedMarket(bootstrap, market.country)]);
 
   // Phase 3: the real session, with visitor data + PO token attached.
   const yt = await Innertube.create({
@@ -147,16 +151,34 @@ async function createSession(): Promise<any> {
     enable_session_cache: false,
     visitor_data: visitorData,
     po_token: poToken,
-    location: market.country,
+    location: gl,
     lang: displayLanguage(),
   });
   (yt as any).__visitorData = visitorData;
   (yt as any).__poToken = poToken;
-  (yt as any).__market = market.country;
+  (yt as any).__market = gl;
   console.log(
     `[bytune] innertube session: gl=${yt.session?.context?.client?.gl ?? "?"} hl=${yt.session?.context?.client?.hl ?? "?"}`
   );
   return yt;
+}
+
+/**
+ * The market YouTube Music answers for: the device's own, or the provider default when YouTube
+ * Music doesn't serve that country. There every request fails ("Search didn't go through"),
+ * so one cheap suggestions call on the bootstrap session tells before the real one is made.
+ */
+async function servedMarket(bootstrap: any, country: string): Promise<string> {
+  if (country === DEFAULT_MARKET) return country;
+  try {
+    await callSearchSuggestions(bootstrap, "a");
+    return country;
+  } catch (err) {
+    // Offline or a hiccup says nothing about the country: keep the device's market.
+    if (!rejectsMarket(err)) return country;
+    console.warn(`[bytune] YouTube Music doesn't serve ${country}; using ${DEFAULT_MARKET}`);
+    return DEFAULT_MARKET;
+  }
 }
 
 export function getYT(): Promise<any> {

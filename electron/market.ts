@@ -42,6 +42,16 @@ export interface ResolvedMarket {
 /** YouTube Music's own default region — the provider's global fallback. */
 export const DEFAULT_MARKET = "US";
 
+/**
+ * True when InnerTube refused a request for its market. Every YouTube Music request whose `gl`
+ * is a country YouTube Music doesn't serve (Botswana, China…) fails with HTTP 400 "Request
+ * contains an invalid argument". Anything else (offline, a timeout, a 5xx) says nothing about the country.
+ */
+export function rejectsMarket(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  return /status code 400\b/.test(message);
+}
+
 /** Normalize to a strict ISO-3166 alpha-2 code, or null when unusable. */
 export function normalizeCountry(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;

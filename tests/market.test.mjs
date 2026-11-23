@@ -9,9 +9,21 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_MARKET,
   normalizeCountry,
+  rejectsMarket,
   resolveMarket,
   timezoneToCountry,
 } from "../.test-build/market.mjs";
+
+test("only YouTube Music's 400 answer means it doesn't serve the market", () => {
+  const refused = new Error(
+    "Request to https://www.youtube.com/youtubei/v1/music/get_search_suggestions?prettyPrint=false&alt=json failed with status code 400"
+  );
+  assert.equal(rejectsMarket(refused), true);
+  assert.equal(rejectsMarket(new Error("Request to https://www.youtube.com/youtubei/v1/browse failed with status code 403")), false);
+  assert.equal(rejectsMarket(new Error("Request to https://www.youtube.com/youtubei/v1/browse failed with status code 4000")), false);
+  assert.equal(rejectsMarket(new Error("fetch failed")), false);
+  assert.equal(rejectsMarket(undefined), false);
+});
 
 test("os region wins over timezone — regional settings are the user's country", () => {
   const m = resolveMarket({ osRegion: "IN", timeZone: "America/New_York", isDev: false });

@@ -55,7 +55,7 @@ async function load({ offered = [251, 140], localTracks = {} } = {}) {
     electron: { app: { getLocaleCountryCode: () => "US", getLocale: () => "en-US", isPackaged: true, getPath: () => os.tmpdir() } },
     "youtubei.js": { Innertube: { create: async () => yt } },
     "./po-token": { getPoToken: async () => "po", invalidatePoToken() {} },
-    "./market": { resolveMarket: () => ({ country: "US", source: "test" }) },
+    "./market": { resolveMarket: () => ({ country: "US", source: "test" }), DEFAULT_MARKET: "US", rejectsMarket: () => false },
     "./local-library": { localTrackById: (id) => localTracks[id] ?? null },
     "./lyrics": {},
     "./artwork": {},
