@@ -66,6 +66,10 @@ export function useMenuLight(): {
       el.style.transition = "";
     }
     el.classList.toggle("is-danger", row.dataset.tone === "danger");
+    // A row that carries a cover (data-light) lights in it.
+    const cover = row.dataset.light;
+    if (cover) el.style.setProperty("--light", cover);
+    el.classList.toggle("is-lit", !!cover);
     el.classList.add("is-on");
   };
   /** Off a row, it rests on the row whose own menu is open, or on the keyboard's row, or goes out. */

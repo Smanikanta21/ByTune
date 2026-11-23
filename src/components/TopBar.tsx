@@ -41,6 +41,7 @@ import { useRecents } from "../stores/recents";
 import { useRecentItems } from "../stores/recentItems";
 import type { SearchSuggestion } from "../types";
 import { Artwork } from "./primitives";
+import { lightOf } from "./RowLight";
 import { FitText } from "./FitText";
 import { useMenuLight } from "./ContextMenu";
 import { StreakChip } from "./Streak";
@@ -527,6 +528,8 @@ export function TopBar() {
                     key={s.id}
                     data-active={activeIdx === i + 1}
                     data-menu-row=""
+                    // The dropdown's light takes on this row's cover, as the song lists do.
+                    data-light={s.thumb ? lightOf(s.thumb) : undefined}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => openSuggestion(s)}
                     onContextMenu={(e) => openSuggestionMenu(e, s)}

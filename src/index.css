@@ -243,6 +243,11 @@ body {
 .menu-light.is-on {
   opacity: 1;
 }
+/* On a row with a cover (a song, artist or album in the search dropdown), the light is made of
+   that cover, blurred across the row, the way the song lists are lit (paint: .tl-light::before). */
+.menu-light.is-lit {
+  overflow: hidden;
+}
 .menu-light.is-danger {
   background: rgb(229 72 77 / 0.15);
 }
@@ -1199,8 +1204,25 @@ body.bytune-dragging * {
   bottom: 0;
   z-index: -1;
 }
+/* A card's own light (RowLight's HoverLight): the same paint, under its content while it's hovered. */
+.tl-hover {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.group:hover > .tl-hover,
+.group:focus-visible > .tl-hover {
+  opacity: 1;
+}
 .tl-light::before,
-.tl-playing::before {
+.tl-playing::before,
+.tl-hover::before,
+.menu-light.is-lit::before {
   content: "";
   position: absolute;
   inset: -45% -8%;

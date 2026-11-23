@@ -8,7 +8,7 @@
  * re-ranking. Scrolling near the end of the list fetches the next page via
  * YouTube's continuation token, exactly like the phone.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Disc3, LayoutGrid, ListMusic, ListPlus, ListStart, Mic, MoreVertical, Music2, Play, Search as SearchIcon, SearchX, User, X, type LucideIcon } from "lucide-react";
 import { Artwork, EqBars, ErrorState, ExplicitBadge, IconBtn, ListSkeleton, Pills } from "../components/primitives";
 import { browseMenuItems, trackMenuItems } from "../lib/trackActions";
@@ -17,6 +17,7 @@ import { playPlaylist } from "../lib/playlist";
 import { useDrag } from "../lib/dnd";
 import { fmtTime, shortTitle } from "../lib/format";
 import { FitText } from "../components/FitText";
+import { HoverLight, PlayingLight, useRowLight } from "../components/RowLight";
 import { isMac } from "../lib/platform";
 import { usePlayer, useTrackPlayback } from "../stores/player";
 import { useRecents } from "../stores/recents";
@@ -63,26 +64,48 @@ function rowKey(row: SearchRow, i: number): string {
 /* Rows                                                             */
 /* ---------------------------------------------------------------- */
 
-function SongSearchRow({ song, onPlay }: { song: Track; onPlay: () => void }) {
+/** The pointer came onto a row: its list's light moves to it (RowLight). */
+type OnHover = (row: HTMLElement, thumb: string | null | undefined) => void;
+
+/** A list of results lit the way the song lists are: the light of the row under the pointer glides with it. */
+function LitList({ children }: { children: (hover: OnHover) => ReactNode }) {
+  const rowLight = useRowLight();
+  return (
+    // isolate: the rows' z-index (.tl-row) stays in here, so the panel's search band (App.tsx) still covers them.
+    <div className="relative isolate" onMouseLeave={rowLight.leave}>
+      {rowLight.light}
+      {children(rowLight.hover)}
+    </div>
+  );
+}
+
+function SongSearchRow({ song, onPlay, onHover }: { song: Track; onPlay: () => void; onHover: OnHover }) {
   const openContextMenu = useUI((s) => s.openContextMenu);
   const drag = useDrag({ track: song });
   const state = useTrackPlayback(song.id);
+  const tint = tintHoverHandlers(song.thumb);
   const openMenu = (x: number, y: number): void => {
     openContextMenu(x, y, trackMenuItems(song));
   };
   return (
     <div
-      {...tintHoverHandlers(song.thumb)}
       {...drag.props}
+      onMouseEnter={(e) => {
+        tint.onMouseEnter();
+        onHover(e.currentTarget, song.thumb);
+      }}
+      onMouseLeave={tint.onMouseLeave}
       onClick={onPlay}
       onContextMenu={(e) => {
         e.preventDefault();
         openMenu(e.clientX, e.clientY);
       }}
-      className={`fit-host group flex items-center gap-3.5 h-[64px] px-3 rounded-lg cursor-pointer select-none ${
-        state ? "bg-ink-hi/[0.08]" : "hover:bg-ink-hi/[0.05]"
+      className={`tl-row fit-host group flex items-center gap-3.5 h-[64px] px-3 rounded-lg cursor-pointer select-none ${
+        state ? "bg-ink-hi/[0.06]" : "hover:bg-ink-hi/[0.04]"
       } ${drag.dragging ? "opacity-40" : ""}`}
     >
+      {/* The playing song keeps a soft light of its own cover. */}
+      {state && <PlayingLight thumb={song.thumb} />}
       <span className="relative shrink-0">
         <Artwork src={song.thumb} className="w-[52px] h-[52px] rounded-lg" iconClassName="w-4 h-4" alt="" />
         {state === "playing" && (
@@ -147,7 +170,7 @@ const TYPE_LABEL: Record<string, string> = {
   other: "More",
 };
 
-function BrowseSearchRow({ item, onOpened }: { item: BrowseItem; onOpened?: () => void }) {
+function BrowseSearchRow({ item, onOpened, onHover }: { item: BrowseItem; onOpened?: () => void; onHover: OnHover }) {
   const navigate = useUI((s) => s.navigate);
   const toast = useUI((s) => s.toast);
   const isArtist = item.type === "artist";
@@ -181,9 +204,14 @@ function BrowseSearchRow({ item, onOpened }: { item: BrowseItem; onOpened?: () =
     }
   };
 
+  const tint = tintHoverHandlers(item.thumb);
   return (
     <div
-      {...tintHoverHandlers(item.thumb)}
+      onMouseEnter={(e) => {
+        tint.onMouseEnter();
+        onHover(e.currentTarget, item.thumb);
+      }}
+      onMouseLeave={tint.onMouseLeave}
       onClick={onOpen}
       onContextMenu={(e) => {
         const items = browseMenuItems(item);
@@ -193,7 +221,7 @@ function BrowseSearchRow({ item, onOpened }: { item: BrowseItem; onOpened?: () =
       }}
       {...(draggableItem ? drag.props : {})}
       title={isPlaylist ? "Drag into Your Library to import this playlist" : isArtist ? "Drag into Your Library to import this artist's top songs" : isAlbum ? "Drag into Your Library to import this album" : undefined}
-      className={`fit-host flex items-center gap-3.5 h-[68px] px-3 rounded-lg cursor-pointer select-none hover:bg-ink-hi/[0.05] ${
+      className={`tl-row fit-host flex items-center gap-3.5 h-[68px] px-3 rounded-lg cursor-pointer select-none hover:bg-ink-hi/[0.04] ${
         drag.dragging ? "opacity-40" : ""
       }`}
     >
@@ -244,8 +272,9 @@ function TopBrowseCard({ item, onOpened }: { item: BrowseItem; onOpened: () => v
           e.preventDefault();
           useUI.getState().openContextMenu(e.clientX, e.clientY, items);
         }}
-        className="fit-host group flex items-center gap-4 p-4 rounded-xl bg-ink-hi/[0.04] hover:bg-ink-hi/[0.07] transition-colors cursor-pointer select-none"
+        className="fit-host group relative isolate flex items-center gap-4 p-4 rounded-xl bg-ink-hi/[0.04] hover:bg-ink-hi/[0.07] transition-colors cursor-pointer select-none"
       >
+        <HoverLight thumb={item.thumb} />
         <Artwork
           src={item.thumb}
           className={`w-[72px] h-[72px] shrink-0 ${artist ? "rounded-full" : "rounded-[10px]"}`}
@@ -289,10 +318,11 @@ function TopResultCard({ song, onPlay }: { song: Track; onPlay: () => void }) {
           e.preventDefault();
           openContextMenu(e.clientX, e.clientY, trackMenuItems(song));
         }}
-        className={`fit-host group flex items-center gap-4 p-4 rounded-xl bg-ink-hi/[0.04] hover:bg-ink-hi/[0.07] transition-colors cursor-pointer select-none ${
+        className={`fit-host group relative isolate flex items-center gap-4 p-4 rounded-xl bg-ink-hi/[0.04] hover:bg-ink-hi/[0.07] transition-colors cursor-pointer select-none ${
           drag.dragging ? "opacity-40" : ""
         }`}
       >
+        <HoverLight thumb={song.thumb} />
         <Artwork src={song.thumb} className="w-[72px] h-[72px] rounded-[10px] shrink-0" iconClassName="w-6 h-6" alt="" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 font-display text-[20px] font-bold tracking-[-0.02em] text-ink-hi">
@@ -383,8 +413,9 @@ function RecentlyOpened() {
                 open(item);
               }
             }}
-            className="fit-host group relative flex items-center gap-3 h-16 pr-9 rounded-lg bg-ink-hi/[0.03] hover:bg-ink-hi/[0.08] transition-colors overflow-hidden cursor-pointer select-none"
+            className="fit-host group relative isolate flex items-center gap-3 h-16 pr-9 rounded-lg bg-ink-hi/[0.03] hover:bg-ink-hi/[0.08] transition-colors overflow-hidden cursor-pointer select-none"
           >
+            <HoverLight thumb={item.thumb} />
             <Artwork
               src={item.thumb}
               className={`h-16 w-16 shrink-0 ${item.kind === "artist" ? "rounded-full scale-[0.8]" : "rounded-none"}`}
@@ -686,26 +717,29 @@ export function SearchView() {
           {sections.map((section) => (
             <section key={section.title || "results"} className="mt-4">
               {section.title && <h2 className="section-title text-[17px] mb-1.5">{section.title}</h2>}
-              <div>
-                {section.rows.map((row, i) => (
-                  <div key={rowKey(row, i)}>
-                    {row.kind === "top" ? null : row.kind === "track" ? (
-                      <SongSearchRow
-                        song={row.song}
-                        // Just the song clicked: AutoPlay carries on with songs like it,
-                        // rather than the rest of the results page.
-                        onPlay={() => {
-                          remember(songItem(row.song));
-                          playQueue([row.song], 0);
-                        }}
-                      />
-                    ) : (
-                      <BrowseSearchRow item={row.item} onOpened={() => remember(browseItem(row.item))} />
-                    )}
-                    {i < section.rows.length - 1 && <div className="h-px bg-ink-hi/[0.05] ml-[80px] mr-3" />}
-                  </div>
-                ))}
-              </div>
+              <LitList>
+                {(hover) =>
+                  section.rows.map((row, i) => (
+                    <div key={rowKey(row, i)}>
+                      {row.kind === "top" ? null : row.kind === "track" ? (
+                        <SongSearchRow
+                          song={row.song}
+                          // Just the song clicked: AutoPlay carries on with songs like it,
+                          // rather than the rest of the results page.
+                          onPlay={() => {
+                            remember(songItem(row.song));
+                            playQueue([row.song], 0);
+                          }}
+                          onHover={hover}
+                        />
+                      ) : (
+                        <BrowseSearchRow item={row.item} onOpened={() => remember(browseItem(row.item))} onHover={hover} />
+                      )}
+                      {i < section.rows.length - 1 && <div className="h-px bg-ink-hi/[0.05] ml-[80px] mr-3" />}
+                    </div>
+                  ))
+                }
+              </LitList>
             </section>
           ))}
 

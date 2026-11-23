@@ -8,11 +8,16 @@ import { useRef, type CSSProperties, type ReactNode } from "react";
 import { upgradeArtwork } from "../lib/artwork";
 
 /** The row's own cover URL (already loaded for the row): the light needs no download of its own. */
-const lightOf = (thumb: string): string => `url(${JSON.stringify(upgradeArtwork(thumb))})`;
+export const lightOf = (thumb: string): string => `url(${JSON.stringify(upgradeArtwork(thumb))})`;
 
 /** The playing row's own light, inside that row (a .tl-row). */
 export function PlayingLight({ thumb }: { thumb?: string | null }) {
   return thumb ? <span aria-hidden className="tl-playing" style={{ "--light": lightOf(thumb) } as CSSProperties} /> : null;
+}
+
+/** A card's own light, the same paint under its content while it's hovered (the card is a relative, isolated .group). */
+export function HoverLight({ thumb }: { thumb?: string | null }) {
+  return thumb ? <span aria-hidden className="tl-hover" style={{ "--light": lightOf(thumb) } as CSSProperties} /> : null;
 }
 
 /**
