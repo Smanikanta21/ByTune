@@ -290,15 +290,15 @@ Run the installer, launch ByTune, and pick **Continue as guest** (data stays on 
 
 ### Verify your download
 
-Every release asset has a published SHA-256 checksum. Check yours against the list below (current as of **v1.1.1**):
+Every release asset has a published SHA-256 checksum. Check yours against the list below (current as of **v1.2.0**):
 
 | Asset | SHA-256 |
 |---|---|
-| `ByTune-Setup.exe` | `bc8ae737b62826f54429b486bcbbe9d6eedf83c2f4d88d25ae7248945af29bfe` |
-| `ByTune-1.1.1-arm64.dmg` | `c193f447da06505cc6110b298c8c67499d535a68e74f6ebd3ae9d445eb2589ce` |
-| `ByTune-1.1.1-arm64.zip` | `cf3944b2a61a43ad2f30bd4f7ea7bdcdfa3b27aadf2df18c05649a6dc0abab8e` |
-| `ByTune-1.1.1-x64.dmg` | `bcb7de76bf57a46fed2c66028929c793eb38886c492b5beea144a56a18301a33` |
-| `ByTune-1.1.1-x64.zip` | `1fd44817aca2b914b7cfc299e8a4d75eaa4c17fee03aa686c75d450ffaeb28af` |
+| `ByTune-Setup.exe` | `5017cdceecfbdcd612c8048bf90588625d6dafd6e829649379fc561559f37e96` |
+| `ByTune-1.2.0-arm64.dmg` | `3e4aba8112e8d24cbb34a345f149499dde69efe46a403b7221aca788f763abff` |
+| `ByTune-1.2.0-arm64.zip` | `4260178244c2678417ac4e6d42007d9c38d968efda968af5fafa6ac98406c8b1` |
+| `ByTune-1.2.0-x64.dmg` | `02a9dff55a8013b8adc9059fe70d2d8b1fdf6dd4f0643c09614d187440e1d697` |
+| `ByTune-1.2.0-x64.zip` | `58be86527de31e68e1a1410100e19f20fcab2c6aaa1164a9df3f1fca1492abaf` |
 
 ```powershell
 # Windows (PowerShell)
