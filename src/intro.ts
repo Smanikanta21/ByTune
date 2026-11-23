@@ -44,14 +44,15 @@ export function endIntro(): void {
     intro.remove();
     return;
   }
-  // Resolves with the app's own Reduce animation; never held on the intro, ready or not.
+  // Resolves with the app's own Reduce animation; never held on the intro, ready or not: 4 s at most,
+  // the same as the logo's own time.
   const ready = Promise.race([
     new Promise<boolean>((r) =>
       window.addEventListener("bytune-startup-ready", (e) => r(!!(e as CustomEvent<{ reduceMotion?: boolean }>).detail?.reduceMotion), {
         once: true,
       }),
     ),
-    wait(6000).then(() => false),
+    wait(4000).then(() => false),
   ]);
   void play(intro, ready);
 }
