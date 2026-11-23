@@ -51,7 +51,13 @@ export const SETTINGS_KEYS = new Set([
   "loudnessLevel",
   "matchLanguage",
   "profilePhoto",
+  "hiddenShortcuts",
 ]);
+
+/** Hidden sidebar shortcuts from a backup: only the four that can hide, Liked Songs never. */
+export function hiddenShortcutsOk(v: unknown): boolean {
+  return Array.isArray(v) && v.length <= 4 && v.every((k) => ["spotify", "replay", "downloads", "local"].includes(k));
+}
 
 /** A profile picture from a backup: "" (none) or a small base64 image, nothing bigger or stranger. */
 export function profilePhotoOk(v: unknown): boolean {
@@ -138,7 +144,7 @@ export function settingsFromBackup(incoming: unknown, currentEnvelope: unknown):
       continue;
     }
     // A malformed gains list would break the equalizer and the Settings page.
-    if (k in inc && (k !== "eqGains" || eqGainsOk(inc[k])) && (k !== "eqPresets" || eqPresetsOk(inc[k])) && (k !== "loudnessLevel" || ["off", "quiet", "normal", "loud"].includes(inc[k] as string)) && (k !== "matchLanguage" || matchLanguageOk(inc[k])) && (k !== "profilePhoto" || profilePhotoOk(inc[k]))) next[k] = inc[k];
+    if (k in inc && (k !== "eqGains" || eqGainsOk(inc[k])) && (k !== "eqPresets" || eqPresetsOk(inc[k])) && (k !== "loudnessLevel" || ["off", "quiet", "normal", "loud"].includes(inc[k] as string)) && (k !== "matchLanguage" || matchLanguageOk(inc[k])) && (k !== "profilePhoto" || profilePhotoOk(inc[k])) && (k !== "hiddenShortcuts" || hiddenShortcutsOk(inc[k]))) next[k] = inc[k];
   }
   return next;
 }

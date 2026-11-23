@@ -39,6 +39,7 @@ import {
   FolderPlus,
   Gauge,
   Globe,
+  HardDrive,
   Image,
   Infinity as InfinityIcon,
   Info,
@@ -1311,8 +1312,20 @@ function LibraryPane() {
     }
   };
 
+  // The sidebar's shortcuts, each on or off; Liked Songs always stays.
+  const shortcut = (key: string) => ({
+    checked: !s.hiddenShortcuts.includes(key),
+    onChange: (on: boolean) => s.setShortcutHidden(key, !on),
+  });
+
   return (
     <>
+      <Group title="Sidebar">
+        <Row icon={SpotifyIcon} title="Spotify" note="Your Spotify playlists, or connecting them" toggle={shortcut("spotify")} />
+        <Row icon={BarChart3} title="Replay" note="Your listening stats; also under Your data" toggle={shortcut("replay")} />
+        <Row icon={Download} title="Downloads" note="Songs saved for listening offline" toggle={shortcut("downloads")} />
+        <Row icon={HardDrive} title="Local Music" note="Music from folders on this computer" toggle={shortcut("local")} />
+      </Group>
       <Group title="Local music">
         <Row
           icon={FolderOpen}

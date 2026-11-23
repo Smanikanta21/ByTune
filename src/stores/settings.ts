@@ -94,6 +94,8 @@ interface SettingsState {
   /** Your own profile picture: a small square JPEG data URL (lib/imagePick), "" for the coloured letter.
       Settings switch with the account and sync with it, so the photo does too. */
   profilePhoto: string;
+  /** Sidebar shortcuts you've hidden: "spotify", "replay", "downloads", "local". Liked Songs always shows. */
+  hiddenShortcuts: string[];
 
   setDownloadDir(dir: string | null): void;
   setDownloadQuality(q: DownloadQuality): void;
@@ -128,6 +130,7 @@ interface SettingsState {
   setDontRepeatSuggestions(v: boolean): void;
   setHideVolumeBar(v: boolean): void;
   setProfilePhoto(photo: string): void;
+  setShortcutHidden(key: string, hidden: boolean): void;
   setCloseToTray(v: boolean): void;
 }
 
@@ -173,6 +176,7 @@ export const useSettings = create<SettingsState>()(
       // On by default: the main process reads it from this store's file when the window closes.
       closeToTray: true,
       profilePhoto: "",
+      hiddenShortcuts: [],
 
       setDownloadDir: (downloadDir) => set({ downloadDir }),
       setDownloadQuality: (downloadQuality) => set({ downloadQuality }),
@@ -213,6 +217,8 @@ export const useSettings = create<SettingsState>()(
       setDontRepeatSuggestions: (dontRepeatSuggestions) => set({ dontRepeatSuggestions }),
       setHideVolumeBar: (hideVolumeBar) => set({ hideVolumeBar }),
       setProfilePhoto: (profilePhoto) => set({ profilePhoto }),
+      setShortcutHidden: (key, hidden) =>
+        set((s) => ({ hiddenShortcuts: hidden ? [...new Set([...s.hiddenShortcuts, key])] : s.hiddenShortcuts.filter((k) => k !== key) })),
       setCloseToTray: (closeToTray) => set({ closeToTray }),
     }),
     {

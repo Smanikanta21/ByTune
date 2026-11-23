@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Download,
+  EyeOff,
   Folder,
   Heart,
   Library,
@@ -19,6 +20,7 @@ import {
   User,
 } from "lucide-react";
 import { isPinned, useLibrary, type PinnedSingleKey, type Playlist } from "../stores/library";
+import { useSettings } from "../stores/settings";
 import { playingFromRow, usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import { EqBars } from "./primitives";
@@ -74,6 +76,7 @@ function LibraryPill() {
   const followedArtists = useLibrary((s) => s.followedArtists);
   const downloads = useLibrary((s) => s.downloads);
   const pinnedSingles = useLibrary((s) => s.pinnedSingles);
+  const hiddenShortcuts = useSettings((s) => s.hiddenShortcuts);
   const spotifyConnected = useSpotify((s) => s.status.connected);
   const spotifyProblem = useSpotify((s) => s.status.problem);
   const spotifyPlaylists = useSpotify((s) => s.playlists);
@@ -192,7 +195,10 @@ function LibraryPill() {
     pinned: singlePinned("replay"),
     singleKey: "replay",
   };
-  const singles: LibRow[] = [likedRow, spotifyRow, replayRow, downloadsRow, localRow];
+  // Hidden ones (Settings → Library, or the row's own menu) leave; Liked Songs always stays.
+  const singles: LibRow[] = [likedRow, spotifyRow, replayRow, downloadsRow, localRow].filter(
+    (r) => r.singleKey === "liked" || !hiddenShortcuts.includes(r.singleKey!)
+  );
 
   // A playlist of nothing but songs from this computer stays here, and says so where "Playlist" would be.
   const subtitleOf = (p: Playlist): string =>
@@ -536,12 +542,25 @@ function LibraryPill() {
       e.preventDefault();
       e.stopPropagation();
       const pinned = singlePinned(r.singleKey);
+      const key = r.singleKey;
       openContextMenu(e.clientX, e.clientY, [
         {
           label: pinned ? "Unpin" : "Pin to top",
           icon: pinned ? PinOff : Pin,
-          action: () => useLibrary.getState().togglePinSingle(r.singleKey!),
+          action: () => useLibrary.getState().togglePinSingle(key),
         },
+        ...(key === "liked"
+          ? []
+          : [
+              {
+                label: "Hide from sidebar",
+                icon: EyeOff,
+                action: () => {
+                  useSettings.getState().setShortcutHidden(key, true);
+                  useUI.getState().toast(`${r.title} is hidden. Turn it back on in Settings → Library.`);
+                },
+              },
+            ]),
       ]);
       return;
     }

@@ -34,6 +34,14 @@ test("a profile photo survives a backup; anything but a small image is never imp
   }
 });
 
+test("hidden sidebar shortcuts survive a backup; Liked Songs or junk never hides", () => {
+  const doc = settingsToBackup(envelope({ hiddenShortcuts: ["spotify", "local"] }));
+  assert.deepEqual(settingsFromBackup(doc, envelope({})), { hiddenShortcuts: ["spotify", "local"] });
+  for (const bad of [["liked"], ["spotify", "nope"], "spotify", [1]]) {
+    assert.deepEqual(settingsFromBackup({ hiddenShortcuts: bad }, envelope({})), {}, JSON.stringify(bad));
+  }
+});
+
 test("saved EQ presets survive a backup; malformed ones are never imported", () => {
   const eqPresets = [{ name: "Night", gains: [3, 2, 1, 0, 0, 0, 0, -1, -2, -3] }];
   const doc = settingsToBackup(envelope({ eqPresets, eqAutoHeadroom: false }));
